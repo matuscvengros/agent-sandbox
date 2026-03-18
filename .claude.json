@@ -1,0 +1,11 @@
+{
+  "hasCompletedOnboarding": true,
+  "autoUpdates": false,
+  "officialMarketplaceAutoInstallAttempted": true,
+  "officialMarketplaceAutoInstalled": true,
+  "projects": {
+    "/home/claude/project": {
+      "hasTrustDialogAccepted": true
+    }
+  }
+}

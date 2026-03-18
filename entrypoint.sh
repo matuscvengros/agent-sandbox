@@ -13,7 +13,6 @@ if [ -n "$SSH_PRIVATE_KEY_B64" ]; then
   echo "$SSH_PRIVATE_KEY_B64" | base64 -d > /home/claude/.ssh/id_ed25519
   chmod 700 /home/claude/.ssh
   chmod 600 /home/claude/.ssh/id_ed25519
-  ssh-keyscan github.com gitlab.com >> /home/claude/.ssh/known_hosts 2>/dev/null
 fi
 
 if [ $# -gt 0 ]; then

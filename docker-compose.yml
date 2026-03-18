@@ -10,7 +10,7 @@ services:
       - ${PWD}:/home/claude/project
       # Read-only host filesystem access
       - ${HOME}:/host/home:ro
-    tmpfs:
+    # tmpfs:
       # Secrets masking — tmpfs overlays hide the real directories beneath
       # - /host/home/.ssh:ro,size=0
       # - /host/home/.gnupg:ro,size=0
@@ -27,7 +27,6 @@ services:
     stdin_open: true
     tty: true
     network_mode: bridge
-    profiles: ["default"]
 
   claude-safe:
     build:
