@@ -4,10 +4,10 @@ Docker container for running Claude Code autonomously on Ubuntu 24.04 LTS. Built
 
 ## Variants
 
-| Profile | Permissions | Host access | Use case |
+| Service | Permissions | Host access | Use case |
 |---------|------------|-------------|----------|
-| `default` | Autonomous (no prompts) | R/W project + read-only `$HOME` | Full autonomous development |
-| `safe` | Autonomous (no prompts) | R/W project only | Sandboxed project work |
+| `claude` | Autonomous (no prompts) | R/W project + read-only `$HOME` | Full autonomous development |
+| `claude-safe` | Autonomous (no prompts) | R/W project only | Sandboxed project work |
 
 ## Pre-installed tools
 
@@ -15,24 +15,24 @@ Docker container for running Claude Code autonomously on Ubuntu 24.04 LTS. Built
 - Python 3 + pip + venv
 - Rust (rustup)
 - C/C++ (gcc, g++, make, cmake, build-essential)
-- Git, curl, ripgrep, fd, jq
-- Starship prompt (Gruvbox Rainbow)
+- Git, curl, ripgrep, fd, jq, openssh-client
+- Starship prompt (Bracketed Segments)
 
 ## Setup
 
 1. Copy `.env.example` to `.env` and fill in your values:
    ```
-   CLAUDE_SETUP_TOKEN=<your-token>
+   ANTHROPIC_AUTH_TOKEN=<your-token>
    GIT_USER_NAME=Your Name
    GIT_USER_EMAIL=you@example.com
-   SSH_PRIVATE_KEY_B64=<base64 -i ~/.ssh/id_ed25519>
+   SSH_PRIVATE_KEY_B64=<output of: base64 -i ~/.ssh/id_ed25519>
    ```
 
 2. Place any custom plugins in `plugins/` before building.
 
 3. Build:
    ```bash
-   docker compose --profile default build
+   docker compose build
    docker compose --profile safe build
    ```
 
@@ -40,20 +40,22 @@ Docker container for running Claude Code autonomously on Ubuntu 24.04 LTS. Built
 
 Interactive mode:
 ```bash
-docker compose --profile default run --rm claude
+docker compose run --rm claude
 docker compose --profile safe run --rm claude-safe
 ```
 
 Prompt mode:
 ```bash
-docker compose --profile default run --rm claude "build a REST API for todos"
+docker compose run --rm claude "build a REST API for todos"
 ```
+
+> Use `--rm` to automatically remove the container after it exits.
 
 ### Aliases
 
 Add to your shell profile for seamless usage:
 ```bash
-alias claudesb='docker compose -f ~/Documents/projects/claude-docker/docker-compose.yml --profile default run --rm claude'
+alias claudesb='docker compose -f ~/Documents/projects/claude-docker/docker-compose.yml run --rm claude'
 alias claudesafe='docker compose -f ~/Documents/projects/claude-docker/docker-compose.yml --profile safe run --rm claude-safe'
 ```
 
@@ -63,7 +65,7 @@ cd ~/my-project
 claudesb
 ```
 
-## Mount layout (default profile)
+## Mount layout (default)
 
 | Container path | Host source | Access |
 |---------------|-------------|--------|
