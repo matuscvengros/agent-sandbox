@@ -2,10 +2,10 @@ services:
   sandbox:
     build: .
     env_file: .env
-    working_dir: /home/node/project
+    working_dir: /home/claude/project
     volumes:
       # R/W project workspace — mounts caller's current directory
-      - ${PWD}:/home/node/project
+      - ${PWD}:/home/claude/project
       # Read-only host filesystem access
       - ${HOME}:/home/host:ro
       # Mask secret files (not directories) with /dev/null

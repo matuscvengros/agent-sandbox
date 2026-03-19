@@ -1,14 +1,14 @@
 {
-  "name": "Coding Agent Sandbox (DevContainer)",
+  "name": "Claude Code Sandbox (DevContainer)",
   "dockerComposeFile": "docker-compose.yml",
   "service": "sandbox",
-  "workspaceFolder": "/home/node/project",
-  "workspaceMount": "source=${localWorkspaceFolder},target=/home/node/project,type=bind,consistency=cached",
-  "remoteUser": "node",
+  "workspaceFolder": "/home/claude/project",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/home/claude/project,type=bind,consistency=cached",
+  "remoteUser": "claude",
   "remoteEnv": {
-    "HOME": "/home/node"
+    "HOME": "/home/claude"
   },
-  "postStartCommand": "/bin/bash /home/node/project/.devcontainer/post-start.sh",
+  "postStartCommand": "/bin/bash /home/claude/project/.devcontainer/post-start.sh",
   "customizations": {
     "vscode": {
       "settings": {

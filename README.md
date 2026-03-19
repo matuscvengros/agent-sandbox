@@ -1,6 +1,6 @@
-# Coding Agent Docker Sandbox
+# Claude Code Docker Sandbox
 
-Docker container for running coding agents (Claude Code, OpenCode, Aider, etc.) autonomously. Based on `node:22` (Debian Bookworm). Built for macOS hosts using OrbStack where Docker Sandbox isn't available.
+Docker container for running Claude Code autonomously. Based on `node:22` (Debian Bookworm). Built for macOS hosts using OrbStack where Docker Sandbox isn't available.
 
 ## Pre-installed tools
 
@@ -17,7 +17,6 @@ Docker container for running coding agents (Claude Code, OpenCode, Aider, etc.) 
    ```
    ANTHROPIC_AUTH_TOKEN=<your-token>
    SSH_PRIVATE_KEY_B64=<output of: base64 -i ~/.ssh/id_ed25519>
-   CODING_AGENT=claude
    ```
 
 2. Build:
@@ -39,22 +38,17 @@ Prompt mode:
 docker compose run --rm sandbox -- -p "build a REST API for todos"
 ```
 
-Passing flags (use `--` to separate docker flags from agent flags):
+Passing flags (use `--` to separate docker flags from claude flags):
 ```bash
 docker compose run --rm sandbox -- --model opus
 docker compose run --rm sandbox -- --model opus -p "build a REST API"
-```
-
-Using a different coding agent:
-```bash
-CODING_AGENT=opencode docker compose run --rm sandbox
 ```
 
 > Use `--rm` to automatically remove the container after it exits.
 
 ### DevContainer (VS Code / Cursor)
 
-Open this repo (or any project containing `.devcontainer/`) in VS Code and select **"Reopen in Container"**. The container stays running while the IDE is open. Open a terminal to launch your coding agent manually:
+Open this repo (or any project containing `.devcontainer/`) in VS Code and select **"Reopen in Container"**. The container stays running while the IDE is open. Open a terminal to launch Claude:
 
 ```bash
 claude --dangerously-skip-permissions
@@ -71,9 +65,9 @@ alias cc='docker compose -f ~/Documents/projects/claude-docker/docker-compose.ym
 Then from any project directory:
 ```bash
 cd ~/my-project
-sandbox             # interactive, default agent
-cc                  # interactive, claude opus
-cc -p "fix the bug" # prompt mode, claude opus
+sandbox             # interactive, default model
+cc                  # interactive, opus model
+cc -p "fix the bug" # prompt mode, opus model
 ```
 
 ## Standalone vs DevContainer
@@ -82,9 +76,9 @@ cc -p "fix the bug" # prompt mode, claude opus
 |--------|-----------|--------------|
 | **Use case** | Headless, fire-and-forget tasks | Interactive development with IDE |
 | **Launch** | `docker compose run --rm sandbox` | "Reopen in Container" in VS Code |
-| **Lifecycle** | Ephemeral — dies after agent exits | Persistent while IDE is open |
+| **Lifecycle** | Ephemeral — dies after Claude exits | Persistent while IDE is open |
 | **IDE features** | None — pure terminal | Extensions, debugger, source control |
-| **Agent launch** | Automatic via entrypoint | Manual in terminal |
+| **Claude launch** | Automatic via entrypoint | Manual in terminal |
 
 Use both together: devcontainer for interactive work, standalone alias for fire-and-forget tasks on other projects.
 
@@ -92,7 +86,7 @@ Use both together: devcontainer for interactive work, standalone alias for fire-
 
 | Container path | Host source | Access |
 |---------------|-------------|--------|
-| `/home/node/project` | Caller's `$PWD` (standalone) or opened folder (devcontainer) | Read/Write |
+| `/home/claude/project` | Caller's `$PWD` (standalone) or opened folder (devcontainer) | Read/Write |
 | `/home/host` | `$HOME` | Read-only (secrets masked) |
 
 ## Environment variables
@@ -101,4 +95,3 @@ Use both together: devcontainer for interactive work, standalone alias for fire-
 |----------|----------|-------------|
 | `ANTHROPIC_AUTH_TOKEN` | Yes | Claude API authentication token |
 | `SSH_PRIVATE_KEY_B64` | No | Base64-encoded SSH private key (`base64 -i ~/.ssh/id_ed25519`) |
-| `CODING_AGENT` | No | Agent to run (default: `claude`). Options: `claude`, `opencode`, `aider`, etc. |

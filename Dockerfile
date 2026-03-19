@@ -3,7 +3,6 @@ FROM node:22
 ARG DEBIAN_FRONTEND=noninteractive
 
 # --- ROOT OPERATIONS ---
-
 ## System packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential gcc g++ make cmake \
@@ -17,43 +16,50 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN locale-gen en_US.UTF-8
 ENV LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
 
-## Starship prompt
+## Shell: Starship prompt
 RUN curl -sS https://starship.rs/install.sh | sh -s -- -y
 
-## Prepare node user home and grant sudo
-RUN mkdir -p /home/node/.claude /home/node/.config /home/node/.local/bin /home/node/.ssh /home/node/project \
-  && echo "node ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/node
+## User: remove default node user, create claude user
+RUN userdel -r node
+RUN useradd -m -s /bin/bash -u 1000 claude
+RUN mkdir -p /home/claude/.config /home/claude/.local/bin /home/claude/.ssh /home/claude/project
+RUN echo "claude ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/claude
 
-## Copy files into image
+## SSH: known hosts
+COPY known_hosts /home/claude/.ssh/known_hosts
+RUN chmod 700 /home/claude/.ssh
+RUN chmod 644 /home/claude/.ssh/known_hosts
+
+## Claude Code: config files
+RUN mkdir -p /home/claude/.claude
+COPY .claude.json /home/claude/.claude.json
+COPY settings.json /home/claude/.claude/settings.json
+
+## Entrypoint
 COPY entrypoint.sh /entrypoint.sh
-COPY .claude.json /home/node/.claude.json
-COPY settings.json /home/node/.claude/settings.json
-COPY known_hosts /home/node/.ssh/known_hosts
+RUN chmod +x /entrypoint.sh
 
-## Permissions
-RUN chmod +x /entrypoint.sh \
-  && chmod 700 /home/node/.ssh \
-  && chmod 644 /home/node/.ssh/known_hosts \
-  && chown -R node:node /home/node
+## Finalize root: fix ownership
+RUN chown -R claude:claude /home/claude
 
 # --- USER OPERATIONS ---
-USER node
+USER claude
 
-## Claude Code (native installer)
-ENV PATH="/home/node/.local/bin:${PATH}"
-RUN curl -fsSL https://claude.ai/install.sh | bash
-
-## Rust
+## Languages: Rust
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-ENV PATH="/home/node/.cargo/bin:${PATH}"
+ENV PATH="/home/claude/.cargo/bin:${PATH}"
 
-## Starship config
-RUN starship preset bracketed-segments -o ~/.config/starship.toml \
-  && echo 'eval "$(starship init bash)"' >> ~/.bashrc
+## Shell: Starship config
+RUN starship preset bracketed-segments -o ~/.config/starship.toml
+RUN echo 'eval "$(starship init bash)"' >> ~/.bashrc
 
 ## Git identity
-RUN git config --global user.name "Matus Cvengros" \
-  && git config --global user.email "matus.cvengros@gmail.com"
+RUN git config --global user.name "Matus Cvengros"
+RUN git config --global user.email "matus.cvengros@gmail.com"
 
-WORKDIR /home/node/project
+## Claude Code: install
+ENV PATH="/home/claude/.local/bin:${PATH}"
+RUN curl -fsSL https://claude.ai/install.sh | bash
+
+WORKDIR /home/claude/project
 ENTRYPOINT ["/entrypoint.sh"]
