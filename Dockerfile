@@ -54,9 +54,7 @@ ENV PATH="/home/claude/.cargo/bin:${PATH}"
 RUN starship preset bracketed-segments -o ~/.config/starship.toml
 RUN echo 'eval "$(starship init bash)"' >> ~/.bashrc
 
-## Git identity
-RUN git config --global user.name "Matus Cvengros"
-RUN git config --global user.email "matus.cvengros@gmail.com"
+## Git identity (configured at runtime via env vars)
 
 ## Claude Code: install
 ENV PATH="/home/claude/.local/bin:${PATH}"

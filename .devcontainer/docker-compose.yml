@@ -7,6 +7,8 @@ services:
     env_file: ../.env
     working_dir: /home/claude/project
     volumes:
+      # Project workspace
+      - ..:/home/claude/project
       # Read-only host filesystem access (same as standalone)
       - ${HOME}:/home/host:ro
       # Mask secret files with /dev/null

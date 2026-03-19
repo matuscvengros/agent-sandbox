@@ -3,7 +3,6 @@
   "dockerComposeFile": "docker-compose.yml",
   "service": "claude-sandbox",
   "workspaceFolder": "/home/claude/project",
-  "workspaceMount": "source=${localWorkspaceFolder},target=/home/claude/project,type=bind,consistency=cached",
   "remoteUser": "claude",
   "remoteEnv": {
     "HOME": "/home/claude"

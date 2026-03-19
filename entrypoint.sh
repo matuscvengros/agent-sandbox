@@ -11,5 +11,13 @@ if [ -n "$SSH_PRIVATE_KEY_B64" ]; then
   chmod 600 /home/claude/.ssh/id_ed25519
 fi
 
+# Configure git identity from env vars
+if [ -n "$GIT_USER_NAME" ]; then
+  git config --global user.name "$GIT_USER_NAME"
+fi
+if [ -n "$GIT_USER_EMAIL" ]; then
+  git config --global user.email "$GIT_USER_EMAIL"
+fi
+
 # Pass all arguments through to claude
 exec claude --dangerously-skip-permissions "$@"
