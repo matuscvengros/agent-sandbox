@@ -4,13 +4,21 @@ ARG DEBIAN_FRONTEND=noninteractive
 
 # --- ROOT OPERATIONS ---
 ## System packages
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update
+RUN apt-get install -y --no-install-recommends \
+    # Build tools
     build-essential gcc g++ make cmake \
+    # Version control & networking
     git curl wget ca-certificates gnupg openssh-client \
+    # Python
     python3 python3-pip python3-venv \
+    # CLI utilities
     ripgrep fd-find jq unzip \
-    sudo locales \
-  && rm -rf /var/lib/apt/lists/*
+    # System
+    sudo locales
+
+# Cleanup apt cache to reduce image size
+RUN rm -rf /var/lib/apt/lists/*
 
 ## Locale
 RUN sed -i '/en_US.UTF-8/s/^# //' /etc/locale.gen

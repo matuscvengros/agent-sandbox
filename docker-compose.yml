@@ -7,7 +7,7 @@ services:
     volumes:
       # R/W project workspace — mounts caller's current directory
       - ${PWD}:/home/claude/project
-      # Read-only host filesystem access
+      # Read-only host home directory access
       - ${HOME}:/home/host:ro
       # Mask secret files (not directories) with /dev/null
       - /dev/null:/home/host/.npmrc:ro
