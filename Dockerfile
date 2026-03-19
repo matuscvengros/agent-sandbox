@@ -28,7 +28,7 @@ RUN curl -sS https://starship.rs/install.sh | sh -s -- -y
 ## Remove default ubuntu user, create claude user
 RUN userdel -r ubuntu \
   && useradd -m -s /bin/bash -u 1001 claude \
-  && mkdir -p /home/claude/.local/bin /home/claude/.claude /home/claude/.config /home/claude/.ssh /home/claude/project
+  && mkdir -p /home/claude/.claude /home/claude/.config /home/claude/.local/bin /home/claude/.ssh /home/claude/project
 
 ## Copy files into image
 COPY entrypoint.sh /entrypoint.sh
