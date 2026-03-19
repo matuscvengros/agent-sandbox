@@ -3,10 +3,6 @@ set -e
 
 export HOME=/home/claude
 
-# Override git identity if env vars are provided
-[ -n "$GIT_USER_NAME" ] && git config --global user.name "$GIT_USER_NAME"
-[ -n "$GIT_USER_EMAIL" ] && git config --global user.email "$GIT_USER_EMAIL"
-
 # Recreate SSH key from base64-encoded env var
 if [ -n "$SSH_PRIVATE_KEY_B64" ]; then
   mkdir -p /home/claude/.ssh

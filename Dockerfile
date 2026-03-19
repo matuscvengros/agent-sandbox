@@ -1,8 +1,9 @@
-FROM ubuntu:24.04 AS base
+FROM ubuntu:24.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 
 # --- ROOT OPERATIONS ---
+
 ## System packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential gcc g++ make cmake \
@@ -24,31 +25,26 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
 ## Starship prompt
 RUN curl -sS https://starship.rs/install.sh | sh -s -- -y
 
-## Remove default ubuntu user home
-RUN rm -rf /home/ubuntu
+## Remove default ubuntu user, create claude user
+RUN userdel -r ubuntu \
+  && useradd -m -s /bin/bash -u 1001 claude
 
-## Create claude (non-root) user
-RUN useradd -m -s /bin/bash -u 1001 claude \
-  && mkdir -p /home/claude/.claude /home/claude/.config /home/claude/project \
-  && chown -R claude:claude /home/claude
-
-## Entrypoint
+## Entrypoint (must be root-owned at /)
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-## Claude Code onboarding config
-COPY .claude.json /home/claude/.claude.json
-RUN chown claude:claude /home/claude/.claude.json
-
-## SSH known hosts
-COPY known_hosts /home/claude/.ssh/known_hosts
-RUN mkdir -p /home/claude/.ssh \
-  && chmod 700 /home/claude/.ssh \
-  && chmod 644 /home/claude/.ssh/known_hosts \
-  && chown -R claude:claude /home/claude/.ssh
-
 # --- CLAUDE USER OPERATIONS ---
 USER claude
+
+## Create directories
+RUN mkdir -p ~/.claude ~/.config ~/.ssh ~/project
+
+## Copy config files (owned by claude automatically)
+COPY .claude.json /home/claude/.claude.json
+COPY settings.json /home/claude/.claude/settings.json
+COPY plugins/ /home/claude/.claude/plugins/
+COPY known_hosts /home/claude/.ssh/known_hosts
+RUN chmod 700 ~/.ssh && chmod 644 ~/.ssh/known_hosts
 
 ## Claude Code (native installer)
 RUN curl -fsSL https://claude.ai/install.sh | bash
@@ -59,34 +55,12 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/home/claude/.cargo/bin:${PATH}"
 
 ## Starship config
-RUN starship preset bracketed-segments -o /home/claude/.config/starship.toml \
-  && echo 'eval "$(starship init bash)"' >> /home/claude/.bashrc
+RUN starship preset bracketed-segments -o ~/.config/starship.toml \
+  && echo 'eval "$(starship init bash)"' >> ~/.bashrc
 
-# -----------------------------------------------------------
-# Default variant: autonomous with full tooling and plugins
-# -----------------------------------------------------------
-FROM base AS default
+## Git identity
+RUN git config --global user.name "Matus Cvengros" \
+  && git config --global user.email "matus.cvengros@gmail.com"
 
-USER root
-COPY settings/settings-default.json /home/claude/.claude/settings.json
-COPY plugins/ /home/claude/.claude/plugins/
-COPY setup-plugins.sh /tmp/setup-plugins.sh
-RUN chmod +x /tmp/setup-plugins.sh \
-  && chown -R claude:claude /home/claude/.claude
-
-USER claude
-WORKDIR /home/claude/project
-ENTRYPOINT ["/entrypoint.sh"]
-
-# -----------------------------------------------------------
-# Safe variant: project-only access, normal permissions
-# -----------------------------------------------------------
-FROM base AS safe
-
-USER root
-COPY settings/settings-safe.json /home/claude/.claude/settings.json
-RUN chown -R claude:claude /home/claude/.claude
-
-USER claude
 WORKDIR /home/claude/project
 ENTRYPOINT ["/entrypoint.sh"]

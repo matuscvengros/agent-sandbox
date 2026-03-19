@@ -2,13 +2,6 @@
 
 Docker container for running Claude Code autonomously on Ubuntu 24.04 LTS. Built for macOS hosts using OrbStack where Docker Sandbox isn't available.
 
-## Variants
-
-| Service | Permissions | Host access | Use case |
-|---------|------------|-------------|----------|
-| `claude` | Autonomous (no prompts) | R/W project + read-only `$HOME` | Full autonomous development |
-| `claude-safe` | Autonomous (no prompts) | R/W project only | Sandboxed project work |
-
 ## Pre-installed tools
 
 - Node.js 22 (LTS) + npm
@@ -23,8 +16,6 @@ Docker container for running Claude Code autonomously on Ubuntu 24.04 LTS. Built
 1. Copy `.env.example` to `.env` and fill in your values:
    ```
    ANTHROPIC_AUTH_TOKEN=<your-token>
-   GIT_USER_NAME=Your Name
-   GIT_USER_EMAIL=you@example.com
    SSH_PRIVATE_KEY_B64=<output of: base64 -i ~/.ssh/id_ed25519>
    ```
 
@@ -33,7 +24,6 @@ Docker container for running Claude Code autonomously on Ubuntu 24.04 LTS. Built
 3. Build:
    ```bash
    docker compose build
-   docker compose --profile safe build
    ```
 
 ## Usage
@@ -41,7 +31,6 @@ Docker container for running Claude Code autonomously on Ubuntu 24.04 LTS. Built
 Interactive mode:
 ```bash
 docker compose run --rm claude
-docker compose --profile safe run --rm claude-safe
 ```
 
 Prompt mode:
@@ -62,7 +51,6 @@ docker compose run --rm claude -- --model opus -p "build a REST API"
 Add to your shell profile for seamless usage:
 ```bash
 alias claudesb='docker compose -f ~/Documents/projects/claude-docker/docker-compose.yml run --rm claude'
-alias claudesafe='docker compose -f ~/Documents/projects/claude-docker/docker-compose.yml --profile safe run --rm claude-safe'
 alias cc='docker compose -f ~/Documents/projects/claude-docker/docker-compose.yml run --rm claude -- --model opus'
 ```
 
@@ -74,12 +62,12 @@ cc                  # interactive, opus model
 cc -p "fix the bug" # prompt mode, opus model
 ```
 
-## Mount layout (default)
+## Mount layout
 
 | Container path | Host source | Access |
 |---------------|-------------|--------|
 | `/home/claude/project` | Caller's `$PWD` | Read/Write |
-| `/host/home` | `$HOME` | Read-only |
+| `/home/host` | `$HOME` | Read-only (secrets masked) |
 
 ## Plugins
 

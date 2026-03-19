@@ -1,8 +1,6 @@
 services:
   claude:
-    build:
-      context: .
-      target: default
+    build: .
     env_file: .env
     working_dir: /home/claude/project
     volumes:
@@ -22,17 +20,3 @@ services:
     stdin_open: true
     tty: true
     network_mode: bridge
-
-  claude-safe:
-    build:
-      context: .
-      target: safe
-    env_file: .env
-    working_dir: /home/claude/project
-    volumes:
-      # R/W project workspace only — no host filesystem access
-      - ${PWD}:/home/claude/project
-    stdin_open: true
-    tty: true
-    network_mode: none
-    profiles: ["safe"]
