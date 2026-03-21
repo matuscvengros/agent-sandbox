@@ -9,9 +9,13 @@ services:
     entrypoint: sleep infinity
     env_file: ../.env
     working_dir: /home/claude/project
+    environment:
+      - SSH_AUTH_SOCK=/ssh-agent
     volumes:
       # Project workspace
       - ..:/home/claude/project
+      # SSH agent forwarding (falls back to /dev/null if no agent on host)
+      - ${SSH_AUTH_SOCK:-/dev/null}:/ssh-agent:ro
       # Read-only host filesystem access (same as standalone)
       - ${HOME}:/home/host:ro
       # Mask secret files with /dev/null
