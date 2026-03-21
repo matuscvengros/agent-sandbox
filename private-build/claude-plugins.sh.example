@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+# claude plugin marketplace add git@github.com:name/private-plugin-marketplace
+# claude plugin install plugin@private-plugin-marketplace

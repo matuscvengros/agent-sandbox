@@ -1,3 +1,6 @@
 .claude
 .env
 .credentials.json
+
+# Private Build Files
+private-build/claude-plugins.sh
