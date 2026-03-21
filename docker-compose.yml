@@ -3,7 +3,7 @@ services:
     image: claude-docker-sandbox
     build:
       context: .
-      target: base
+      target: ${BUILD_TARGET:-base}
       ssh:
         - default
     env_file: .env

@@ -18,29 +18,26 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
  && rm -rf /var/lib/apt/lists/*
 
 ## Locale
-RUN sed -i '/en_US.UTF-8/s/^# //' /etc/locale.gen
-RUN locale-gen en_US.UTF-8
+RUN sed -i '/en_US.UTF-8/s/^# //' /etc/locale.gen \
+ && locale-gen en_US.UTF-8
 ENV LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
 
 ## User: remove default node user, create claude user
-RUN userdel -r node
-RUN useradd -m -s /bin/bash -u 1000 claude
-RUN mkdir -p /home/claude/.config /home/claude/.local/bin /home/claude/.ssh /home/claude/project
-RUN echo "claude ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/claude
+RUN userdel -r node \
+ && useradd -m -s /bin/bash -u 1000 claude \
+ && mkdir -p /home/claude/.config /home/claude/.local/bin /home/claude/.ssh /home/claude/.claude /home/claude/project \
+ && chmod 700 /home/claude/.ssh \
+ && echo "claude ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/claude
 
 ## SSH: known hosts
-COPY ssh/known_hosts /home/claude/.ssh/known_hosts
-RUN chmod 700 /home/claude/.ssh
-RUN chmod 644 /home/claude/.ssh/known_hosts
+COPY --chmod=644 ssh/known_hosts /home/claude/.ssh/known_hosts
 
-## Claude Code: config directories and files
-RUN mkdir -p /home/claude/.claude
+## Claude Code: config
 COPY claude/.claude.json /home/claude/.claude.json
 COPY claude/settings.json /home/claude/.claude/settings.json
 
 ## Entrypoint
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+COPY --chmod=755 entrypoint.sh /entrypoint.sh
 
 ## Finalize root: fix ownership
 RUN chown -R claude:claude /home/claude
@@ -49,15 +46,12 @@ RUN chown -R claude:claude /home/claude
 USER claude
 
 ## Shared credential setup script
-COPY --chown=claude:claude scripts/setup-credentials.sh /tmp/setup-credentials.sh
-RUN chmod +x /tmp/setup-credentials.sh
+COPY --chmod=755 --chown=claude:claude scripts/setup-credentials.sh /tmp/setup-credentials.sh
 
 ## Shell: Starship prompt
-RUN curl -sS https://starship.rs/install.sh | sh -s -- -y
-
-## Shell: Starship config
-RUN starship preset bracketed-segments -o /home/claude/.config/starship.toml
-RUN echo 'eval "$(starship init bash)"' >> /home/claude/.bashrc
+RUN curl -sS https://starship.rs/install.sh | sh -s -- -y \
+ && starship preset bracketed-segments -o /home/claude/.config/starship.toml \
+ && echo 'eval "$(starship init bash)"' >> /home/claude/.bashrc
 
 ## Claude Code: install
 ENV PATH="/home/claude/.local/bin:${PATH}"
@@ -92,8 +86,7 @@ ENTRYPOINT ["/entrypoint.sh"]
 FROM base AS full
 
 ### Private plugins
-COPY --chown=claude:claude private-build/claude-plugins.sh /tmp/claude-plugins.sh
-RUN --mount=type=ssh chmod +x /tmp/claude-plugins.sh \
-    && sudo chmod 666 /run/buildkit/ssh_agent.* \
-    && bash /tmp/claude-plugins.sh \
-    && rm -f /tmp/claude-plugins.sh
+COPY --chmod=755 --chown=claude:claude private-build/claude-plugins.sh /tmp/claude-plugins.sh
+RUN --mount=type=ssh sudo chmod 666 /run/buildkit/ssh_agent.* \
+ && bash /tmp/claude-plugins.sh \
+ && rm -f /tmp/claude-plugins.sh
