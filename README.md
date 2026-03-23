@@ -36,8 +36,8 @@ You can get a token by running `claude set-token` on your host machine.
 ### 3. Configure git identity (optional)
 
 ```bash
-GIT_USER_NAME=Your Name
-GIT_USER_EMAIL=you@example.com
+GIT_USER_NAME="Your Name"
+GIT_USER_EMAIL="you@example.com"
 ```
 
 ### 4. Build
