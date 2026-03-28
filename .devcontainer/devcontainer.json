@@ -1,12 +1,33 @@
 {
   "name": "Claude Code Sandbox (DevContainer)",
-  "dockerComposeFile": "docker-compose.yml",
-  "service": "claude-sandbox",
+  "build": {
+    "dockerfile": "../Dockerfile",
+    "context": "..",
+    "target": "base"
+  },
+  "overrideCommand": true,
+  "workspaceMount": "source=${localWorkspaceFolder},target=/home/claude/project,type=bind",
   "workspaceFolder": "/home/claude/project",
   "remoteUser": "claude",
   "remoteEnv": {
     "HOME": "/home/claude"
   },
+  "containerEnv": {
+    "SSH_AUTH_SOCK": "/ssh-agent"
+  },
+  "mounts": [
+    "source=${localEnv:SSH_AUTH_SOCK},target=/ssh-agent,type=bind,readonly",
+    "source=${localEnv:HOME},target=/home/host,type=bind,readonly",
+    "source=/dev/null,target=/home/host/.npmrc,type=bind,readonly"
+  ],
+  "runArgs": [
+    "--env-file", "${localWorkspaceFolder}/.env",
+    "--tmpfs", "/home/host/.ssh:ro,size=0",
+    "--tmpfs", "/home/host/.config:ro,size=0",
+    "--tmpfs", "/home/host/.docker:ro,size=0",
+    "--tmpfs", "/home/host/.orbstack:ro,size=0",
+    "--tmpfs", "/home/host/Library/Keychains:ro,size=0"
+  ],
   "postStartCommand": "/bin/bash /home/claude/project/.devcontainer/post-start.sh",
   "customizations": {
     "vscode": {
