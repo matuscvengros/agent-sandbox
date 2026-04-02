@@ -7,5 +7,5 @@ export HOME=/home/claude
 source /tmp/setup-credentials.sh
 rm -f /tmp/setup-credentials.sh
 
-# Run CMD (defaults to "claude" — override with e.g. "bash")
+# Run CMD (defaults to bash — override via docker run/compose)
 exec "$@"
