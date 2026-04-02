@@ -4,7 +4,7 @@
 #   cc -is, --isolated  Run Claude in ephemeral mode (no host state)
 #   cc -b, --bash       Drop into a bash shell instead of Claude
 cc() {
-    local compose="docker compose -f $DOCKER_SANDBOX_DIR/docker-compose.yml"
+    local -a compose=(docker compose -f "$DOCKER_SANDBOX_DIR/docker-compose.yml")
     local project_name
     project_name="$(basename "$PWD")"
 
@@ -20,13 +20,13 @@ cc() {
 
     case "$mode" in
         isolated)
-            PROJECT_NAME="$project_name" $compose run --rm claude-sandbox claude "$@"
+            PROJECT_NAME="$project_name" "${compose[@]}" run --rm claude-sandbox claude "$@"
             ;;
         bash)
-            PROJECT_NAME="$project_name" $compose run --rm claude-sandbox "$@"
+            PROJECT_NAME="$project_name" "${compose[@]}" run --rm claude-sandbox "$@"
             ;;
         persistent)
-            PROJECT_NAME="$project_name" $compose run --rm \
+            PROJECT_NAME="$project_name" "${compose[@]}" run --rm \
                 -v /home/agents/.claude:/home/claude/.claude \
                 -v /home/agents/.claude.json:/home/claude/.claude.json \
                 -v /home/agents/.config:/home/claude/.config \
