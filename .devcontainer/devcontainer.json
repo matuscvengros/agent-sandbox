@@ -6,8 +6,8 @@
     "target": "${localEnv:BUILD_TARGET:base}"
   },
   "overrideCommand": true,
-  "workspaceMount": "source=${localWorkspaceFolder},target=/home/claude/project,type=bind",
-  "workspaceFolder": "/home/claude/project",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/home/claude/${localWorkspaceFolderBasename},type=bind",
+  "workspaceFolder": "/home/claude/${localWorkspaceFolderBasename}",
   "remoteUser": "claude",
   "remoteEnv": {
     "HOME": "/home/claude"

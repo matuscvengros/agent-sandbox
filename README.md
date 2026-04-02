@@ -1,4 +1,4 @@
-# Claude Code: Docker Sandbox
+# Docker Sandbox for Claude Code
 
 [![Docker](https://img.shields.io/badge/Docker-node%3A24-blue?logo=docker)](https://hub.docker.com/_/node)
 [![Build](https://github.com/matuscvengros/claude-docker-sandbox/actions/workflows/build.yml/badge.svg)](https://github.com/matuscvengros/claude-docker-sandbox/actions/workflows/build.yml)
@@ -87,48 +87,61 @@ docker compose build --no-cache                    # base
 BUILD_TARGET=private docker compose build --no-cache # private
 ```
 
-## Shell aliases
+## Shell function
 
-Add these to your `~/.bashrc` or `~/.zshrc` for seamless usage from any directory:
+The `cc` function lets you launch the sandbox from any project directory. In persistent mode, it mounts Claude's state from a dedicated `agents` directory to keep it separate from your own config — this avoids polluting your home environment with persistent files from the container. If you'd rather share your own `~/.claude` config directly, you can modify the mount paths, but keep in mind the two environments may diverge and aren't necessarily meant to be the same.
+
+### macOS
+
+Expects a `/Users/agents` directory for persistent state (`sudo mkdir -p /Users/agents && sudo chown $USER:staff /Users/agents`).
 
 ```bash
-CLAUDE_DOCKER="$HOME/path/to/claude-docker-sandbox"
-
-# Isolated sandbox — ephemeral, no state persisted between runs
-alias cc="docker compose -f $CLAUDE_DOCKER/docker-compose.yml run --rm claude-sandbox claude"
-
-# Drop into a shell instead of Claude
-alias ccsh="docker compose -f $CLAUDE_DOCKER/docker-compose.yml run --rm claude-sandbox bash"
-
-# Shared sandbox — persists Claude state (memory, sessions, plugins) across runs
-alias ccpub="docker compose -f $CLAUDE_DOCKER/docker-compose.yml run --rm -v $HOME/.claude:/home/claude/.claude claude-sandbox claude"
+echo 'export DOCKER_SANDBOX_DIR="$HOME/path/to/claude-docker-sandbox"' >> ~/.zshrc
+cat shell/.zshrc >> ~/.zshrc
+source ~/.zshrc
 ```
 
-Then from any project directory:
+### Linux
+
+Expects a `/home/agents` directory for persistent state (`sudo mkdir -p /home/agents && sudo chown $USER:$USER /home/agents`).
+
+```bash
+echo 'export DOCKER_SANDBOX_DIR="$HOME/path/to/claude-docker-sandbox"' >> ~/.bashrc
+cat shell/.bashrc >> ~/.bashrc
+source ~/.bashrc
+```
+
+### Usage
+
+From any project directory:
 
 ```bash
 cd ~/my-project
 
-cc                            # interactive, isolated
-cc -- -p "build a REST API"   # prompt mode, isolated
+cc                            # interactive, persistent state
+cc -- -p "build a REST API"   # prompt mode, persistent state
 cc -- --model sonnet          # override default model
 
-ccsh                          # shell access, isolated
-ccpub                         # interactive, persistent state
-ccpub -- -p "continue"        # prompt mode, persistent state
+cc -is                        # interactive, isolated (no host state)
+cc --isolated -- -p "task"    # prompt mode, isolated
+
+cc -b                         # drop into a bash shell
+cc --bash                     # same thing
 ```
 
-**`cc`** gives you a clean, disposable sandbox every time — Claude starts fresh with no memory of previous sessions.
+**`cc`** (default) mounts Claude's persistent state (`.claude`, `.claude.json`, `.config`) from the `agents` directory into the container, preserving conversation history, project memory, and plugin state across runs. Runs with `--dangerously-skip-permissions`.
 
-**`ccsh`** drops you into a bash shell inside the sandbox for manual inspection or setup.
+**`cc --isolated`** gives you a clean, disposable sandbox — Claude starts fresh with no memory of previous sessions.
 
-**`ccpub`** maps `~/.claude` on your host to the container's Claude config directory. This preserves conversation history, project memory, and plugin state across runs. The directory is created automatically on first use.
+**`cc --bash`** drops you into a bash shell inside the sandbox for manual inspection or setup.
+
+The current directory is automatically mounted into the container at `/home/claude/<folder-name>` (e.g., running from `~/my-project` mounts to `/home/claude/my-project`).
 
 ## Usage
 
 ### Standalone (headless / CLI)
 
-Without aliases:
+Without the shell function:
 
 ```bash
 # Interactive
@@ -251,7 +264,7 @@ The script runs during the `private` build stage with the host's SSH agent forwa
 
 | Container path | Host source | Access | Purpose |
 |---------------|-------------|--------|---------|
-| `/home/claude/project` | Caller's `$PWD` | Read/Write | Project workspace |
+| `/home/claude/<folder-name>` | Caller's `$PWD` | Read/Write | Project workspace |
 | `/ssh-agent` | Host's `$SSH_AUTH_SOCK` | Read-only | SSH agent forwarding |
 
 ### DevContainer
@@ -260,7 +273,7 @@ The DevContainer additionally mounts the host home directory for reference, with
 
 | Container path | Host source | Access | Purpose |
 |---------------|-------------|--------|---------|
-| `/home/claude/project` | Workspace folder | Read/Write | Project workspace |
+| `/home/claude/<folder-name>` | Workspace folder | Read/Write | Project workspace |
 | `/ssh-agent` | Host's `$SSH_AUTH_SOCK` | Read-only | SSH agent forwarding |
 | `/home/host` | `$HOME` | Read-only | Host home directory |
 

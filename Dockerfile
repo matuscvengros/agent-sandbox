@@ -46,9 +46,6 @@ COPY --chmod=644 ssh/known_hosts /home/claude/.ssh/known_hosts
 COPY claude/.claude.json /home/claude/.claude.json
 COPY claude/settings.json /home/claude/.claude/settings.json
 
-# -- Entrypoint -------------------------------------------------------------
-COPY --chmod=755 entrypoint.sh /entrypoint.sh
-
 # -- Finalize Root ----------------------------------------------------------
 RUN chown -R claude:claude /home/claude
 
@@ -56,9 +53,6 @@ RUN chown -R claude:claude /home/claude
 # User operations
 # ===========================================================================
 USER claude
-
-# -- Credential Setup -------------------------------------------------------
-COPY --chmod=755 --chown=claude:claude scripts/setup-credentials.sh /tmp/setup-credentials.sh
 
 # -- Shell: Starship Prompt -------------------------------------------------
 RUN curl -sS https://starship.rs/install.sh | sh -s -- -y \
@@ -70,7 +64,6 @@ ENV PATH="/home/claude/.local/bin:${PATH}"
 RUN curl -fsSL https://claude.ai/install.sh | bash
 
 # -- Claude Code: Plugins ---------------------------------------------------
-
 ## QOL
 RUN npx claude-statusline-atomic@latest install
 
@@ -114,6 +107,13 @@ RUN claude plugin install firecrawl@claude-plugins-official \
 
 # -- Healthcheck ------------------------------------------------------------
 HEALTHCHECK --interval=30s --timeout=5s CMD claude --version || exit 1
+
+# -- Scripts -------------------------------------------------------------
+## Entrypoint
+COPY --chmod=755 scripts/entrypoint.sh /entrypoint.sh
+
+## Credentials
+COPY --chmod=755 --chown=claude:claude scripts/setup-credentials.sh /tmp/setup-credentials.sh
 
 WORKDIR /home/claude/project
 ENTRYPOINT ["/entrypoint.sh"]
