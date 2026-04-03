@@ -11,6 +11,20 @@ cc() {
     local mode="persistent"
     while [[ $# -gt 0 ]]; do
         case "$1" in
+            -h|--help)
+                echo "Usage: cc [options] [-- extra args passed to claude/container]"
+                echo ""
+                echo "Options:"
+                echo "  -h,  --help      Show this help message"
+                echo "  -is, --isolated  Run Claude in ephemeral mode (no host state)"
+                echo "  -b,  --bash      Drop into a bash shell instead of Claude"
+                echo ""
+                echo "Modes:"
+                echo "  (default)   Run Claude with persistent state (~/.claude, ~/.config mounted)"
+                echo "  isolated    Ephemeral container, no state persisted to host"
+                echo "  bash        Shell access to the container (no Claude)"
+                return 0
+                ;;
             -is|--isolated) mode="isolated"; shift ;;
             -b|--bash)      mode="bash";     shift ;;
             --)             shift; break ;;
@@ -20,7 +34,7 @@ cc() {
 
     case "$mode" in
         isolated)
-            PROJECT_NAME="$project_name" "${compose[@]}" run --rm claude-sandbox claude "$@"
+            PROJECT_NAME="$project_name" "${compose[@]}" run --rm claude-sandbox claude --dangerously-skip-permissions "$@"
             ;;
         bash)
             PROJECT_NAME="$project_name" "${compose[@]}" run --rm claude-sandbox "$@"

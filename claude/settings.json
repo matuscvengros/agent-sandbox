@@ -2,9 +2,10 @@
   "permissions": {
     "defaultMode": "bypassPermissions",
     "deny": [
-      "Read(.env)"
+      "Read(./.env)"
     ]
   },
   "skipDangerousModePermissionPrompt": true,
-  "model": "opus"
+  "model": "opus",
+  "voiceEnabled": false
 }

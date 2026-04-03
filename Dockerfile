@@ -21,6 +21,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ripgrep fd-find jq unzip \
     # System
     sudo locales socat \
+    # Utilities \
+    sox \
     && rm -rf /var/lib/apt/lists/*
 
 # -- npm: Upgrade to Latest -------------------------------------------------
@@ -35,16 +37,12 @@ ENV LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
 ## Remove default node user, create claude user
 RUN userdel -r node \
     && useradd -m -s /bin/bash -u 1000 claude \
-    && mkdir -p /home/claude/.config /home/claude/.local/bin /home/claude/.ssh /home/claude/.claude /home/claude/project \
+    && mkdir -p /home/claude/.config /home/claude/.local/bin /home/claude/.ssh /home/claude/.claude \
     && chmod 700 /home/claude/.ssh \
     && echo "claude ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/claude
 
 # -- SSH --------------------------------------------------------------------
 COPY --chmod=644 ssh/known_hosts /home/claude/.ssh/known_hosts
-
-# -- Claude Code Config -----------------------------------------------------
-COPY claude/.claude.json /home/claude/.claude.json
-COPY claude/settings.json /home/claude/.claude/settings.json
 
 # -- Finalize Root ----------------------------------------------------------
 RUN chown -R claude:claude /home/claude
@@ -53,6 +51,10 @@ RUN chown -R claude:claude /home/claude
 # User operations
 # ===========================================================================
 USER claude
+
+# -- Claude Code Config -----------------------------------------------------
+COPY --chown=claude:claude claude/.claude.json /home/claude/.claude.json
+COPY --chown=claude:claude claude/settings.json /home/claude/.claude/settings.json
 
 # -- Shell: Starship Prompt -------------------------------------------------
 RUN curl -sS https://starship.rs/install.sh | sh -s -- -y \
@@ -81,26 +83,23 @@ RUN claude plugin install superpowers@claude-plugins-official \
     && claude plugin install learning-output-style@claude-plugins-official \
     && claude plugin install commit-commands@claude-plugins-official \
     && claude plugin install hookify@claude-plugins-official \
-    && claude plugin install security-guidance@claude-plugins-official
-
-## Plugin & Skill Development
-RUN claude plugin install agent-sdk-dev@claude-plugins-official \
+    && claude plugin install security-guidance@claude-plugins-official \
+    ## Plugin & Skill Development
+    && claude plugin install agent-sdk-dev@claude-plugins-official \
     && claude plugin install mcp-server-dev@claude-plugins-official \
     && claude plugin install plugin-dev@claude-plugins-official \
-    && claude plugin install skill-creator@claude-plugins-official
-
-## Code Quality & Development
-RUN claude plugin install code-review@claude-plugins-official \
+    && claude plugin install skill-creator@claude-plugins-official \
+    ## Code Quality & Development
+    && claude plugin install code-review@claude-plugins-official \
     && claude plugin install code-simplifier@claude-plugins-official \
     && claude plugin install pr-review-toolkit@claude-plugins-official \
     && claude plugin install feature-dev@claude-plugins-official \
     && claude plugin install pyright-lsp@claude-plugins-official \
     && claude plugin install typescript-lsp@claude-plugins-official \
     && claude plugin install clangd-lsp@claude-plugins-official \
-    && claude plugin install frontend-design@claude-plugins-official
-
-## External Tools & Integrations
-RUN claude plugin install firecrawl@claude-plugins-official \
+    && claude plugin install frontend-design@claude-plugins-official \
+    ## External Tools & Integrations
+    && claude plugin install firecrawl@claude-plugins-official \
     && claude plugin install playwright@claude-plugins-official \
     && claude plugin install context7@claude-plugins-official \
     && claude plugin install github@claude-plugins-official
@@ -114,6 +113,9 @@ COPY --chmod=755 scripts/entrypoint.sh /entrypoint.sh
 
 ## Credentials
 COPY --chmod=755 --chown=claude:claude scripts/setup-credentials.sh /tmp/setup-credentials.sh
+
+## Trust
+COPY --chmod=755 --chown=claude:claude scripts/setup-claude-workdir-trust.sh /tmp/setup-claude-workdir-trust.sh
 
 WORKDIR /home/claude/project
 ENTRYPOINT ["/entrypoint.sh"]

@@ -127,6 +127,8 @@ cc --isolated -- -p "task"    # prompt mode, isolated
 
 cc -b                         # drop into a bash shell
 cc --bash                     # same thing
+
+cc -h                         # show help
 ```
 
 **`cc`** (default) mounts Claude's persistent state (`.claude`, `.claude.json`, `.config`) from the `agents` directory into the container, preserving conversation history, project memory, and plugin state across runs. Runs with `--dangerously-skip-permissions`.
@@ -300,5 +302,6 @@ The container ships with these Claude Code defaults (configured in `claude/setti
 
 - **Model:** `opus`
 - **Permissions:** `bypassPermissions` (autonomous mode) with `.env` files denied
+- **Workspace trust:** Automatically granted at container start for the mounted working directory (`scripts/setup-claude-workdir-trust.sh`)
 - **Onboarding:** Skipped (pre-configured in `claude/.claude.json`)
 - **Auto-updates:** Enabled

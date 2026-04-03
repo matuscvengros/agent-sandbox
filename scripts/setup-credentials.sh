@@ -6,6 +6,7 @@ if [ -S "$SSH_AUTH_SOCK" ] && sudo ssh-add -l &>/dev/null; then
   # Proxy the host socket via socat so the claude user can access it
   # without modifying permissions on the host's original socket
   PROXY_SOCK="/home/claude/.ssh/agent.sock"
+  pkill -f "socat.*${PROXY_SOCK}" 2>/dev/null || true
   rm -f "$PROXY_SOCK"
   sudo socat UNIX-LISTEN:"$PROXY_SOCK",fork,user=claude,group=claude,mode=600 \
     UNIX-CONNECT:"$SSH_AUTH_SOCK" &
