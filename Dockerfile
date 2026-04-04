@@ -127,7 +127,7 @@ CMD ["bash"]
 FROM base AS private
 
 # -- Private Plugins --------------------------------------------------------
-COPY --chmod=755 --chown=claude:claude private-build/claude-plugins.sh /tmp/claude-plugins.sh
+COPY --chmod=755 --chown=claude:claude private/claude-plugins.sh /tmp/claude-plugins.sh
 RUN --mount=type=ssh \
     export SSH_AUTH_SOCK=$(ls /run/buildkit/ssh_agent.* 2>/dev/null | head -1) \
     && sudo chmod 666 /run/buildkit/ssh_agent.* \
