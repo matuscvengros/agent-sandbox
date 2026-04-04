@@ -68,20 +68,23 @@ GIT_USER_EMAIL="you@example.com"
 
 ### 5. Build
 
-The recommended setup pulls the pre-built public image from GHCR and builds your private plugins on top. Set these in your `.env`:
+The recommended setup pulls the pre-built public image from GHCR and builds your private plugins on top. Set `BASE_IMAGE` in your `.env`:
 
 ```bash
-BUILD_TARGET=private
 BASE_IMAGE=ghcr.io/matuscvengros/claude-sandbox:latest
 ```
 
 Then build:
 
 ```bash
+# Base only (default)
 docker compose build --pull
+
+# Base + private plugins
+BUILD_TARGET=private docker compose build --pull
 ```
 
-This pulls the latest public image (rebuilt nightly by CI) and layers your private plugins on top. The `--pull` flag ensures Docker checks GHCR for a newer image.
+The `--pull` flag ensures Docker checks GHCR for a newer image. When using the `cc` shell function, `--pull` is included automatically.
 
 **Alternative: full local build**
 
@@ -148,7 +151,7 @@ cc --bash                     # same thing
 cc -h                         # show help
 ```
 
-**`cc`** (default) pulls the latest base image, rebuilds if needed, then mounts Claude's persistent state (`.claude`, `.claude.json`, `.config`) from the `agents` directory into the container, preserving conversation history, project memory, and plugin state across runs. Runs with `--dangerously-skip-permissions`. Use `--no-build` to skip the build step.
+**`cc`** (default) pulls the latest base image, rebuilds if needed, then mounts Claude's persistent state (`.claude`, `.claude.json`, `.config`) from the `agents` directory into the container, preserving conversation history, project memory, and plugin state across runs. Runs with `--dangerously-skip-permissions`. Use `--no-build` to skip the build step. Dangling images from previous builds are automatically cleaned up after each run.
 
 **`cc --isolated`** gives you a clean, disposable sandbox — Claude starts fresh with no memory of previous sessions.
 
@@ -293,7 +296,7 @@ Both standalone and DevContainer modes use the same mount layout.
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `CLAUDE_CODE_OAUTH_TOKEN` | Yes | OAuth token for Claude CLI authentication |
-| `BUILD_TARGET` | No | Build target: `base` (default) or `private` |
+| `BUILD_TARGET` | No | Build target: `base` (default) or `private` (set inline, not in `.env`) |
 | `BASE_IMAGE` | No | Base image for `private` target: `base` (local, default) or GHCR image URL |
 | `GITHUB_TOKEN` | No | Token for GitHub CLI (`gh`) commands |
 | `GITHUB_PERSONAL_ACCESS_TOKEN` | No | Token for the GitHub MCP plugin |

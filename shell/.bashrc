@@ -57,4 +57,7 @@ cc() {
                 claude --dangerously-skip-permissions "$@"
             ;;
     esac
+
+    # Clean up dangling claude-sandbox images
+    docker image prune -f --filter "label=com.docker.compose.project=claude-sandbox" &>/dev/null
 }
