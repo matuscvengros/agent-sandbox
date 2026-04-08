@@ -4,6 +4,11 @@
 ARG BASE_IMAGE=base
 
 # ===========================================================================
+# Python 3.14 (copied into base via multi-stage)
+# ===========================================================================
+FROM python:3.14-bookworm AS python-src
+
+# ===========================================================================
 # Base image
 # ===========================================================================
 FROM node:24 AS base
@@ -20,8 +25,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential gcc g++ make cmake \
     # Version control & networking
     git gh curl wget ca-certificates gnupg openssh-client \
-    # Python
-    python3 python3-pip python3-venv \
     # CLI utilities
     ripgrep fd-find jq unzip \
     # System
@@ -29,6 +32,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # Utilities \
     sox \
     && rm -rf /var/lib/apt/lists/*
+
+# -- Python 3.14 (from official image) -------------------------------------
+## Copied from python:3.14-bookworm multi-stage build
+COPY --from=python-src /usr/local/bin/python* /usr/local/bin/
+COPY --from=python-src /usr/local/bin/pip* /usr/local/bin/
+COPY --from=python-src /usr/local/lib/python3.14 /usr/local/lib/python3.14
+COPY --from=python-src /usr/local/lib/libpython3.14* /usr/local/lib/
+COPY --from=python-src /usr/local/include/python3.14 /usr/local/include/python3.14
+RUN ldconfig \
+    && ln -sf /usr/local/bin/python3.14 /usr/local/bin/python3 \
+    && ln -sf /usr/local/bin/python3 /usr/local/bin/python
 
 # -- npm: Upgrade to Latest -------------------------------------------------
 RUN npm install -g npm@latest
@@ -39,6 +53,7 @@ RUN npm install -g npm@latest
 ## ruff: fast linter & formatter (replaces flake8, black, isort)
 ## pyright: static type checker for Python
 ## pint: physical units library
+## engunits: engineering units conversion library
 ## scipy: scientific computing (optimization, linear algebra, signal processing)
 ## numpy: numerical computing
 ## pandas: data manipulation & analysis
@@ -46,8 +61,8 @@ RUN npm install -g npm@latest
 ## requests: HTTP client
 ## httpx: modern async HTTP client
 ## pydantic: data validation using type hints
-RUN pip install --break-system-packages \
-    uv pytest ruff pyright pint \
+RUN pip install \
+    uv pytest ruff pyright pint engunits \
     scipy numpy pandas matplotlib \
     requests httpx pydantic
 
