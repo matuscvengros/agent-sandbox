@@ -2,7 +2,6 @@
 *.example
 .git
 .github
-.devcontainer
 docs
 README.md
 LICENSE

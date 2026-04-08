@@ -190,27 +190,6 @@ docker compose run --rm claude-sandbox -- --model sonnet -p "build a REST API"
 
 Use `--` to separate Docker flags from Claude flags. Use `--rm` to automatically remove the container after it exits.
 
-### DevContainer (VS Code / Cursor)
-
-Open this repo (or any project containing `.devcontainer/`) in VS Code and select **"Reopen in Container"**. The container stays running while the IDE is open. Open a terminal and launch Claude:
-
-```bash
-claude
-```
-
-The DevContainer comes with VS Code extensions for Python, Rust Analyzer, and ESLint pre-configured.
-
-### Standalone vs DevContainer
-
-| Aspect | Standalone | DevContainer |
-|--------|-----------|--------------|
-| **Use case** | Headless, fire-and-forget tasks | Interactive development with IDE |
-| **Launch** | `cc` / `docker compose run --rm ...` | "Reopen in Container" in VS Code |
-| **Lifecycle** | Ephemeral — dies after Claude exits | Persistent while IDE is open |
-| **IDE features** | None — pure terminal | Extensions, debugger, source control |
-| **Claude launch** | Automatic via entrypoint | Manual in terminal |
-| **Host home access** | No | No |
-
 ## SSH & authentication
 
 ### SSH in the running container
@@ -301,7 +280,7 @@ The script runs during the `private` build stage with the host's SSH agent forwa
 | `/home/claude/<folder-name>` | Caller's `$PWD` | Read/Write | Project workspace |
 | `/ssh-agent` | Host's `$SSH_AUTH_SOCK` | Read-only | SSH agent forwarding |
 
-Both standalone and DevContainer modes use the same mount layout.
+The current directory is mounted into the container at `/home/claude/<folder-name>`.
 
 ## Environment variables
 
