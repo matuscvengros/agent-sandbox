@@ -147,8 +147,13 @@ cc --no-build -is             # isolated, skip build
 cc -is                        # interactive, isolated (no host state)
 cc --isolated -- -p "task"    # prompt mode, isolated
 
-cc -b                         # drop into a bash shell
-cc --bash                     # same thing
+cc -v ~/data                  # mount ~/data into container as ~/data (read-write)
+cc -rov ~/config              # mount ~/config as read-only
+cc -v ~/a -rov ~/b            # multiple extra volumes
+cc -v ~/dir1/dir2/dir3        # mounts as ~/dir3 (basename only)
+
+cc -s                         # drop into a bash shell
+cc --shell                    # same thing
 
 cc -h                         # show help
 ```
@@ -157,7 +162,11 @@ cc -h                         # show help
 
 **`cc --isolated`** gives you a clean, disposable sandbox — Claude starts fresh with no memory of previous sessions.
 
-**`cc --bash`** drops you into a bash shell inside the sandbox for manual inspection or setup.
+**`cc --shell`** drops you into a bash shell inside the sandbox for manual inspection or setup.
+
+**`cc -v <path>`** / **`cc --volume <path>`** mounts an additional host directory into the container at `/home/claude/<dirname>` (read-write). Repeatable for multiple volumes.
+
+**`cc -rov <path>`** / **`cc --read-only-volume <path>`** same as `-v` but the mount is read-only. Useful for reference data or configs Claude shouldn't modify.
 
 The current directory is automatically mounted into the container at `/home/claude/<folder-name>` (e.g., running from `~/my-project` mounts to `/home/claude/my-project`).
 
