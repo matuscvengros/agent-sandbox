@@ -1,11 +1,11 @@
 # Claude Docker Sandbox Launcher
 # Usage: cc [options] [-- extra args passed to claude/container]
 #   cc                          Run Claude with persistent state
-#   cc -is, --isolated          Run Claude in ephemeral mode (no host state)
-#   cc -s, --shell              Drop into a bash shell instead of Claude
-#   cc -v, --volume <path>      Mount a host path into ~/  (read-write)
+#   cc -is,  --isolated         Run Claude in ephemeral mode (no host state)
+#   cc -s,   --shell            Drop into a bash shell instead of Claude
+#   cc -v,   --volume <path>    Mount a host path into ~/  (read-write)
 #   cc -rov, --read-only-volume Mount a host path into ~/  (read-only)
-#   cc --no-build               Skip the build step (use existing image)
+#   cc       --no-build         Skip the build step (use existing image)
 cc() {
     local -a compose=(docker compose -f "$DOCKER_SANDBOX_DIR/docker-compose.yml")
     local project_name
