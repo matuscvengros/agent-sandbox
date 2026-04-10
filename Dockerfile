@@ -9,14 +9,14 @@ ARG BASE_IMAGE=base
 FROM python:3.14-bookworm AS python-src
 
 # ===========================================================================
-# Base image
+# Base Image
 # ===========================================================================
 FROM node:24 AS base
 
 ARG DEBIAN_FRONTEND=noninteractive
 
 # ===========================================================================
-# Root operations
+# Root Operations
 # ===========================================================================
 
 # -- System Packages --------------------------------------------------------
@@ -47,6 +47,10 @@ RUN ldconfig \
 # -- npm: Upgrade to Latest -------------------------------------------------
 RUN npm install -g npm@latest
 
+# -- TypeScript LSP ------------------------------------------------------------
+## typescript-language-server: LSP wrapper for tsserver
+RUN sudo npm install -g typescript-language-server
+
 # -- Python Tools -----------------------------------------------------------
 ## uv: fast Python package manager
 ## pytest: testing framework
@@ -74,7 +78,8 @@ ENV RUSTUP_HOME=/usr/local/rustup \
     PATH="/usr/local/cargo/bin:${PATH}"
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
     | sh -s -- -y --default-toolchain stable --profile default \
-    && chmod -R a+w $RUSTUP_HOME $CARGO_HOME
+    && chmod -R a+w $RUSTUP_HOME $CARGO_HOME \
+    && rustup component add rust-analyzer
 
 # -- Locale -----------------------------------------------------------------
 RUN sed -i '/en_US.UTF-8/s/^# //' /etc/locale.gen \
@@ -96,7 +101,7 @@ COPY --chmod=644 ssh/known_hosts /home/claude/.ssh/known_hosts
 RUN chown -R claude:claude /home/claude
 
 # ===========================================================================
-# User operations
+# User Operations
 # ===========================================================================
 USER claude
 
@@ -109,7 +114,7 @@ RUN curl -sS https://starship.rs/install.sh | sh -s -- -y \
     && starship preset bracketed-segments -o /home/claude/.config/starship.toml \
     && echo 'eval "$(starship init bash)"' >> /home/claude/.bashrc
 
-# -- Claude Code: install ---------------------------------------------------
+# -- Claude Code: Install ---------------------------------------------------
 ENV PATH="/home/claude/.local/bin:${PATH}"
 RUN curl -fsSL https://claude.ai/install.sh | bash
 
@@ -170,7 +175,7 @@ ENTRYPOINT ["/entrypoint.sh"]
 CMD ["bash"]
 
 # ===========================================================================
-# Full: base + private plugins
+# Full: Base + Private Plugins
 # ===========================================================================
 FROM ${BASE_IMAGE} AS private
 
