@@ -95,6 +95,8 @@ To rebuild from scratch (no cache):
 docker compose -f docker-compose.yml -f docker-compose.build.yml build --no-cache
 ```
 
+Or via the helper: `cc -bf` / `cc --build-force`.
+
 ## Shell function
 
 The `cc` function lets you launch the sandbox from any project directory. In persistent mode, it mounts `~/.claude`, `~/.claude.json`, and `~/.config` from your home directory into the container so session history, plugins, settings, and tool configs are shared with your host Claude Code.
@@ -125,6 +127,7 @@ cc -- -p "build a REST API"   # prompt mode, persistent state
 cc -- --model sonnet          # override default model
 
 cc -b                         # build image locally, then run
+cc -bf                        # build locally with --no-cache, then run
 cc --build -is                # build locally, isolated run
 
 cc -is                        # interactive, isolated (no host state)
@@ -144,6 +147,8 @@ cc -h                         # show help
 **`cc`** (default) uses the pulled GHCR image and mounts Claude's persistent state (`~/.claude`, `~/.claude.json`, `~/.config`) into the container, preserving conversation history, project memory, and plugin state across runs. Runs with `--dangerously-skip-permissions`.
 
 **`cc -b` / `cc --build`** builds the image locally from the Dockerfile before running. The local build is tagged `claude-sandbox` and doesn't affect the pulled GHCR image.
+
+**`cc -bf` / `cc --build-force`** same as `--build` but passes `--no-cache` to Docker, bypassing the layer cache. Useful when a cached layer is masking a script change (e.g., `scripts/*`).
 
 **`cc --isolated`** gives you a clean, disposable sandbox — Claude starts fresh with no memory of previous sessions.
 

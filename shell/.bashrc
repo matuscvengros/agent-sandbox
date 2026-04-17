@@ -2,6 +2,7 @@
 # Usage: cc [options] [-- extra args passed to claude/container]
 #   cc                          Run Claude, pulled image, persistent state
 #   cc -b,   --build            Build the image locally instead of pulling
+#   cc -bf,  --build-force      Build locally, bypassing the layer cache
 #   cc -is,  --isolated         Run Claude in ephemeral mode (no host state)
 #   cc -s,   --shell            Drop into a bash shell instead of Claude
 #   cc -v,   --volume <path>    Mount a host path into ~/  (read-write)
@@ -9,6 +10,7 @@
 cc() {
     local -a compose=(docker compose -f "$DOCKER_SANDBOX_DIR/docker-compose.yml")
     local local_build=false
+    local build_no_cache=false
     local mode="persistent"
     local -a extra_vols=()
     local vol_path
@@ -20,14 +22,16 @@ cc() {
                 echo "Options:"
                 echo "  -h,   --help                     Show this help message"
                 echo "  -b,   --build                    Build the image locally instead of pulling from GHCR"
+                echo "  -bf,  --build-force              Build locally, bypassing the layer cache (--no-cache)"
                 echo "  -is,  --isolated                 Run Claude in ephemeral mode (no host state)"
                 echo "  -s,   --shell                    Drop into a bash shell instead of Claude"
                 echo "  -v,   --volume <path>            Mount a host path into ~/ (read-write)"
                 echo "  -rov, --read-only-volume <path>  Mount a host path into ~/ (read-only)"
                 echo ""
                 echo "Image source:"
-                echo "  (default)   Pulled from ghcr.io/matuscvengros/claude-sandbox:latest"
-                echo "  --build     Built locally from the Dockerfile"
+                echo "  (default)       Pulled from ghcr.io/matuscvengros/claude-sandbox:latest"
+                echo "  --build         Built locally from the Dockerfile"
+                echo "  --build-force   Built locally with --no-cache"
                 echo ""
                 echo "Modes:"
                 echo "  (default)   Persistent state — mounts ~/.claude, ~/.claude.json, ~/.config"
@@ -37,6 +41,11 @@ cc() {
                 ;;
             -b|--build)
                 local_build=true
+                compose+=(-f "$DOCKER_SANDBOX_DIR/docker-compose.build.yml")
+                shift ;;
+            -bf|--build-force)
+                local_build=true
+                build_no_cache=true
                 compose+=(-f "$DOCKER_SANDBOX_DIR/docker-compose.build.yml")
                 shift ;;
             -is|--isolated) mode="isolated"; shift ;;
@@ -59,7 +68,9 @@ cc() {
     done
 
     if $local_build; then
-        "${compose[@]}" build || return 1
+        local -a build_args=(build)
+        $build_no_cache && build_args+=(--no-cache)
+        "${compose[@]}" "${build_args[@]}" || return 1
     fi
 
     case "$mode" in
