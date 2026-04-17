@@ -2,6 +2,7 @@
 
 [![Build](https://github.com/matuscvengros/claude-docker-sandbox/actions/workflows/build.yml/badge.svg)](https://github.com/matuscvengros/claude-docker-sandbox/actions/workflows/build.yml)
 [![Release](https://github.com/matuscvengros/claude-docker-sandbox/actions/workflows/release.yml/badge.svg)](https://github.com/matuscvengros/claude-docker-sandbox/actions/workflows/release.yml)
+[![Nightly](https://github.com/matuscvengros/claude-docker-sandbox/actions/workflows/nightly.yml/badge.svg)](https://github.com/matuscvengros/claude-docker-sandbox/actions/workflows/nightly.yml)
 [![Docker](https://img.shields.io/badge/docker-node%3A24--bookworm-blue?logo=docker)](https://hub.docker.com/_/node)
 [![Platform](https://img.shields.io/badge/platform-linux%2Famd64%20%7C%20linux%2Farm64-lightgrey?logo=linux)](https://ghcr.io/matuscvengros/claude-sandbox)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
