@@ -1,9 +1,8 @@
-# Overlay that swaps the pulled GHCR image for a locally built one.
-# Used with: docker compose -f docker-compose.yml -f docker-compose.build.yml ...
-# Invoked by `cc -b` / `cc --build`.
+# Overlay that mounts host Claude/config state into the container for persistent mode.
+# Used with: docker compose -f docker-compose.yml -f docker-compose.persistent.yml ...
+# Invoked by `cc` (default persistent mode).
 services:
   claude-sandbox:
-    image: claude-sandbox
     volumes:
       - "$HOME/.claude:/home/claude/.claude"
       - "$HOME/.claude.json:/home/claude/.claude.json"

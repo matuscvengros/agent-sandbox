@@ -256,7 +256,7 @@ The current directory is mounted into the container at the **same absolute path*
 
 Runs on every push and pull request to `main`. Builds the image with Docker Buildx and GitHub Actions cache.
 
-### Publish workflow
+### Nightly workflow
 
 Runs nightly (14:00 UTC) and on manual trigger. Builds the image for `linux/amd64` and `linux/arm64`, and pushes to GHCR with the `latest` tag. This keeps the public image up to date with the latest Claude Code CLI version.
 
