@@ -78,6 +78,8 @@ cc() {
         local -a build_args=(build)
         $build_no_cache && build_args+=(--no-cache)
         "${compose[@]}" "${build_args[@]}" || return 1
+    else
+        "${compose[@]}" pull claude-sandbox || echo "cc: image pull failed, using local copy" >&2
     fi
 
     case "$mode" in
@@ -102,4 +104,5 @@ cc() {
 
     # Clean up dangling claude-sandbox images
     docker image prune -f --filter "label=com.docker.compose.project=claude-sandbox" &>/dev/null
+    docker image prune -f --filter "label=org.opencontainers.image.source=https://github.com/matuscvengros/claude-sandbox" &>/dev/null
 }
