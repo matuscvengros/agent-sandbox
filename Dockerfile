@@ -59,9 +59,9 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
 ## its bundled node_modules (npm, npx, corepack) need grafting in.
 COPY --from=node-src /usr/local/bin/node /usr/local/bin/node
 COPY --from=node-src /usr/local/lib/node_modules /usr/local/lib/node_modules
-RUN ln -s ../lib/node_modules/npm/bin/npm-cli.js       /usr/local/bin/npm \
- && ln -s ../lib/node_modules/npm/bin/npx-cli.js       /usr/local/bin/npx \
- && ln -s ../lib/node_modules/corepack/dist/corepack.js /usr/local/bin/corepack
+RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js       /usr/local/bin/npm \
+ && ln -s /usr/local/lib/node_modules/npm/bin/npx-cli.js       /usr/local/bin/npx \
+ && ln -s /usr/local/lib/node_modules/corepack/dist/corepack.js /usr/local/bin/corepack
 
 # -- npm: Upgrade to Latest -------------------------------------------------
 RUN npm install -g npm@latest
