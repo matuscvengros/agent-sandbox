@@ -1,12 +1,12 @@
 # ===========================================================================
-# Python 3.14 (copied into the final image via multi-stage)
+# Node 24 (copied into the final image via multi-stage)
 # ===========================================================================
-FROM python:3.14-bookworm AS python-src
+FROM node:24 AS node-src
 
 # ===========================================================================
 # Main Image
 # ===========================================================================
-FROM node:24
+FROM python:3.14-bookworm
 
 LABEL org.opencontainers.image.title="claude-sandbox"
 
@@ -32,16 +32,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     vim \
     && rm -rf /var/lib/apt/lists/*
 
-# -- Python 3.14 (from official image) -------------------------------------
-## Copied from python:3.14-bookworm multi-stage build
-COPY --from=python-src /usr/local/bin/python* /usr/local/bin/
-COPY --from=python-src /usr/local/bin/pip* /usr/local/bin/
-COPY --from=python-src /usr/local/lib/python3.14 /usr/local/lib/python3.14
-COPY --from=python-src /usr/local/lib/libpython3.14* /usr/local/lib/
-COPY --from=python-src /usr/local/include/python3.14 /usr/local/include/python3.14
-RUN ldconfig \
-    && ln -sf /usr/local/bin/python3.14 /usr/local/bin/python3 \
-    && ln -sf /usr/local/bin/python3 /usr/local/bin/python
+# -- Node 24 (from official image) ------------------------------------------
+## Copied from node:24 multi-stage build. Python is the base image (it
+## ships pip, shared libs, and the stdlib), so only the Node binary and
+## its bundled node_modules (npm, npx, corepack) need grafting in.
+COPY --from=node-src /usr/local/bin/node /usr/local/bin/node
+COPY --from=node-src /usr/local/lib/node_modules /usr/local/lib/node_modules
+RUN ln -s ../lib/node_modules/npm/bin/npm-cli.js       /usr/local/bin/npm \
+ && ln -s ../lib/node_modules/npm/bin/npx-cli.js       /usr/local/bin/npx \
+ && ln -s ../lib/node_modules/corepack/dist/corepack.js /usr/local/bin/corepack
 
 # -- npm: Upgrade to Latest -------------------------------------------------
 RUN npm install -g npm@latest
@@ -86,9 +85,9 @@ RUN sed -i '/en_US.UTF-8/s/^# //' /etc/locale.gen \
 ENV LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
 
 # -- User Setup -------------------------------------------------------------
-## Remove default node user, create claude user
-RUN userdel -r node \
-    && useradd -m -s /bin/bash -u 1000 claude \
+## Create claude user (UID 1000). The python:3.14-bookworm base ships no
+## non-root user, so UID 1000 is free.
+RUN useradd -m -s /bin/bash -u 1000 claude \
     && mkdir -p /home/claude/.config /home/claude/.local/bin /home/claude/.ssh /home/claude/.claude \
     && chmod 700 /home/claude/.ssh \
     && echo "claude ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/claude \
