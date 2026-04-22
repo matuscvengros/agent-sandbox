@@ -1,12 +1,12 @@
 # ===========================================================================
-# Python 3.14 (copied into the final image via multi-stage)
+# Node 24 (copied into the final image via multi-stage)
 # ===========================================================================
-FROM python:3.14-bookworm AS python-src
+FROM node:24 AS node-src
 
 # ===========================================================================
 # Main Image
 # ===========================================================================
-FROM node:24
+FROM python:3.14-bookworm
 
 LABEL org.opencontainers.image.title="claude-sandbox"
 
@@ -14,6 +14,11 @@ ARG DEBIAN_FRONTEND=noninteractive
 
 # ===========================================================================
 # Root Operations
+#
+# Ordered by volatility: slow-and-stable things (apt, Rust, Node graft) sit
+# near the top so they cache deeply, semi-volatile things (language tools)
+# below them, and user/fs setup last so edits there don't bust the heavy
+# toolchain layers above.
 # ===========================================================================
 
 # -- System Packages --------------------------------------------------------
@@ -32,23 +37,41 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     vim \
     && rm -rf /var/lib/apt/lists/*
 
-# -- Python 3.14 (from official image) -------------------------------------
-## Copied from python:3.14-bookworm multi-stage build
-COPY --from=python-src /usr/local/bin/python* /usr/local/bin/
-COPY --from=python-src /usr/local/bin/pip* /usr/local/bin/
-COPY --from=python-src /usr/local/lib/python3.14 /usr/local/lib/python3.14
-COPY --from=python-src /usr/local/lib/libpython3.14* /usr/local/lib/
-COPY --from=python-src /usr/local/include/python3.14 /usr/local/include/python3.14
-RUN ldconfig \
-    && ln -sf /usr/local/bin/python3.14 /usr/local/bin/python3 \
-    && ln -sf /usr/local/bin/python3 /usr/local/bin/python
+# -- Locale -----------------------------------------------------------------
+RUN sed -i '/en_US.UTF-8/s/^# //' /etc/locale.gen \
+ && locale-gen en_US.UTF-8
+ENV LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
+
+# -- Rust Toolchain ---------------------------------------------------------
+## rustup: Rust toolchain installer (stable channel)
+## Includes: rustc, cargo, rustfmt, clippy, rust-analyzer
+ENV RUSTUP_HOME=/usr/local/rustup \
+    CARGO_HOME=/usr/local/cargo \
+    PATH="/usr/local/cargo/bin:${PATH}"
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+    | sh -s -- -y --default-toolchain stable --profile default \
+    && chmod -R a+w $RUSTUP_HOME $CARGO_HOME \
+    && rustup component add rust-analyzer
+
+# -- Node 24 (from official image) ------------------------------------------
+## Copied from node:24 multi-stage build. Python is the base image (it
+## ships pip, shared libs, and the stdlib), so only the Node binary and
+## its bundled node_modules (npm, npx, corepack) need grafting in.
+COPY --from=node-src /usr/local/bin/node /usr/local/bin/node
+COPY --from=node-src /usr/local/lib/node_modules /usr/local/lib/node_modules
+RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js       /usr/local/bin/npm \
+ && ln -s /usr/local/lib/node_modules/npm/bin/npx-cli.js       /usr/local/bin/npx \
+ && ln -s /usr/local/lib/node_modules/corepack/dist/corepack.js /usr/local/bin/corepack
 
 # -- npm: Upgrade to Latest -------------------------------------------------
 RUN npm install -g npm@latest
 
-# -- TypeScript LSP ------------------------------------------------------------
+# -- Global npm Tools -------------------------------------------------------
 ## typescript-language-server: LSP wrapper for tsserver
-RUN npm install -g typescript-language-server
+## firecrawl-cli: Firecrawl web-scraping CLI (companion to the firecrawl plugin)
+RUN npm install -g \
+    typescript-language-server \
+    firecrawl-cli
 
 # -- Python Tools -----------------------------------------------------------
 ## uv: fast Python package manager
@@ -69,27 +92,11 @@ RUN pip install \
     scipy numpy pandas matplotlib \
     requests httpx pydantic
 
-# -- Rust Toolchain ---------------------------------------------------------
-## rustup: Rust toolchain installer (stable channel)
-## Includes: rustc, cargo, rustfmt, clippy
-ENV RUSTUP_HOME=/usr/local/rustup \
-    CARGO_HOME=/usr/local/cargo \
-    PATH="/usr/local/cargo/bin:${PATH}"
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
-    | sh -s -- -y --default-toolchain stable --profile default \
-    && chmod -R a+w $RUSTUP_HOME $CARGO_HOME \
-    && rustup component add rust-analyzer
-
-# -- Locale -----------------------------------------------------------------
-RUN sed -i '/en_US.UTF-8/s/^# //' /etc/locale.gen \
- && locale-gen en_US.UTF-8
-ENV LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
-
 # -- User Setup -------------------------------------------------------------
-## Remove default node user, create claude user
-RUN userdel -r node \
-    && useradd -m -s /bin/bash -u 1000 claude \
-    && mkdir -p /home/claude/.config /home/claude/.local/bin /home/claude/.ssh /home/claude/.claude \
+## Create claude user (UID 1000). The python:3.14-bookworm base ships no
+## non-root user, so UID 1000 is free.
+RUN useradd -m -s /bin/bash -u 1000 claude \
+    && mkdir -p /home/claude/.config /home/claude/.ssh /home/claude/.claude \
     && chmod 700 /home/claude/.ssh \
     && echo "claude ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/claude \
     && chmod 0440 /etc/sudoers.d/claude
@@ -102,33 +109,50 @@ RUN chown -R claude:claude /home/claude
 
 # ===========================================================================
 # User Operations
+#
+# Everything from here runs as the claude user. Ordered so the volatile,
+# slow Claude-CLI + plugin installs sit near the bottom, and the semi-stable
+# runtime settings COPY sits after them (edits to settings.json must not
+# bust the plugin-install layer above).
 # ===========================================================================
 USER claude
 
-# -- Claude Code Config -----------------------------------------------------
-COPY --chown=claude:claude claude/.claude.json /home/claude/.claude.json
-COPY --chown=claude:claude claude/settings.json /home/claude/.claude/settings.json
+# -- Per-user npm prefix ----------------------------------------------------
+## Install npm globals under /home/claude/.npm-global so each AI-agent CLI
+## below can be installed as `claude` without sudo. Binaries land in
+## ~/.npm-global/bin which we prepend to PATH.
+##
+## Note: ENV is image-wide, not USER-scoped. These vars persist to runtime
+## and to any future `USER root` layer below, so a subsequent root-level
+## `npm install -g` would also target /home/claude/.npm-global unless it
+## overrides NPM_CONFIG_PREFIX inline.
+ENV NPM_CONFIG_PREFIX=/home/claude/.npm-global \
+    PATH="/home/claude/.npm-global/bin:${PATH}"
 
 # -- Shell: Starship Prompt -------------------------------------------------
 RUN curl -sS https://starship.rs/install.sh | sh -s -- -y \
     && starship preset bracketed-segments -o /home/claude/.config/starship.toml \
     && echo 'eval "$(starship init bash)"' >> /home/claude/.bashrc
 
-# -- Claude Code: Install ---------------------------------------------------
-ENV PATH="/home/claude/.local/bin:${PATH}"
-RUN curl -fsSL https://claude.ai/install.sh | bash
+# -- Claude Code -----------------------------------------------------------
 
-# -- Claude Code: Plugins ---------------------------------------------------
-## QOL
+## -- Install --
+RUN npm install -g @anthropic-ai/claude-code
+
+## -- Onboarding State --
+### Seeds onboarding/marketplace flags so `claude plugin install` below runs
+### non-interactively. Must come before plugin installs, because those mutate
+### this same file.
+COPY --chown=claude:claude claude/.claude.json /home/claude/.claude.json
+
+## -- Plugins --
+### QOL
 RUN npx claude-statusline-atomic@latest install
 
-## Tools
-RUN sudo npm install -g firecrawl-cli
-
-## Official Marketplace
+### Official Marketplace
 RUN claude plugin marketplace add anthropics/claude-plugins-official
 
-## Claude Workflow & Configuration
+### Claude Workflow & Configuration
 RUN claude plugin install superpowers@claude-plugins-official \
     && claude plugin install claude-md-management@claude-plugins-official \
     && claude plugin install claude-code-setup@claude-plugins-official \
@@ -137,12 +161,12 @@ RUN claude plugin install superpowers@claude-plugins-official \
     && claude plugin install commit-commands@claude-plugins-official \
     && claude plugin install hookify@claude-plugins-official \
     && claude plugin install security-guidance@claude-plugins-official \
-    ## Plugin & Skill Development
+    ### Plugin & Skill Development
     && claude plugin install agent-sdk-dev@claude-plugins-official \
     && claude plugin install mcp-server-dev@claude-plugins-official \
     && claude plugin install plugin-dev@claude-plugins-official \
     && claude plugin install skill-creator@claude-plugins-official \
-    ## Code Quality & Development
+    ### Code Quality & Development
     && claude plugin install code-review@claude-plugins-official \
     && claude plugin install code-simplifier@claude-plugins-official \
     && claude plugin install pr-review-toolkit@claude-plugins-official \
@@ -151,24 +175,43 @@ RUN claude plugin install superpowers@claude-plugins-official \
     && claude plugin install typescript-lsp@claude-plugins-official \
     && claude plugin install clangd-lsp@claude-plugins-official \
     && claude plugin install frontend-design@claude-plugins-official \
-    ## External Tools & Integrations
+    ### External Tools & Integrations
     && claude plugin install firecrawl@claude-plugins-official \
     && claude plugin install playwright@claude-plugins-official \
     && claude plugin install context7@claude-plugins-official \
     && claude plugin install github@claude-plugins-official
 
-# -- Healthcheck ------------------------------------------------------------
-HEALTHCHECK --interval=30s --timeout=5s CMD claude --version || exit 1
+## -- Runtime Settings --
+### Placed after the plugin-install layer so edits to model/permissions
+### don't invalidate the expensive plugin layer above.
+COPY --chown=claude:claude claude/settings.json /home/claude/.claude/settings.json
 
-# -- Scripts -------------------------------------------------------------
+# -- Codex -----------------------------------------------------------------
+## OpenAI Codex: AI coding agent CLI
+RUN npm install -g @openai/codex
+
+# -- OpenCode --------------------------------------------------------------
+## SST opencode: open-source AI coding agent
+RUN npm install -g opencode-ai
+
+# -- Pi --------------------------------------------------------------------
+## Pi Coding Agent: minimal terminal coding harness supporting 15+ LLM providers
+RUN npm install -g @mariozechner/pi-coding-agent
+
+# ===========================================================================
+# Finalize
+# ===========================================================================
+
+# -- Scripts ----------------------------------------------------------------
 ## Entrypoint
 COPY --chmod=755 scripts/entrypoint.sh /entrypoint.sh
-
 ## Credentials
 COPY --chmod=755 --chown=claude:claude scripts/setup-credentials.sh /tmp/setup-credentials.sh
-
 ## Trust
 COPY --chmod=755 --chown=claude:claude scripts/setup-claude-workdir-trust.sh /tmp/setup-claude-workdir-trust.sh
+
+# -- Healthcheck ------------------------------------------------------------
+HEALTHCHECK --interval=30s --timeout=5s CMD claude --version || exit 1
 
 WORKDIR /home/claude
 ENTRYPOINT ["/entrypoint.sh"]

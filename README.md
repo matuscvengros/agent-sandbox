@@ -3,11 +3,11 @@
 [![Build](https://github.com/matuscvengros/claude-sandbox/actions/workflows/build.yml/badge.svg)](https://github.com/matuscvengros/claude-sandbox/actions/workflows/build.yml)
 [![Release](https://github.com/matuscvengros/claude-sandbox/actions/workflows/release.yml/badge.svg)](https://github.com/matuscvengros/claude-sandbox/actions/workflows/release.yml)
 [![Nightly](https://github.com/matuscvengros/claude-sandbox/actions/workflows/nightly.yml/badge.svg)](https://github.com/matuscvengros/claude-sandbox/actions/workflows/nightly.yml)
-[![Docker](https://img.shields.io/badge/docker-node%3A24--bookworm-blue?logo=docker)](https://hub.docker.com/_/node)
+[![Docker](https://img.shields.io/badge/docker-python%3A3.14--bookworm-blue?logo=docker)](https://hub.docker.com/_/python)
 [![Platform](https://img.shields.io/badge/platform-linux%2Famd64%20%7C%20linux%2Farm64-lightgrey?logo=linux)](https://ghcr.io/matuscvengros/claude-sandbox)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
 
-Docker container for running Claude Code autonomously in an isolated sandbox. Based on `node:24` (Debian Bookworm). Built for macOS hosts using OrbStack where Docker Sandbox isn't available.
+Docker container for running Claude Code autonomously in an isolated sandbox. Based on `python:3.14-bookworm` with Node.js 24 grafted in. Built for macOS hosts using OrbStack where Docker Sandbox isn't available.
 
 ## Pre-installed tools
 
@@ -18,7 +18,11 @@ Docker container for running Claude Code autonomously in an isolated sandbox. Ba
 - Git, GitHub CLI (`gh`), curl, wget, ripgrep, fd-find, jq, openssh-client
 - Starship prompt (Bracketed Segments preset)
 - Firecrawl CLI (`firecrawl-cli`)
-- Claude Code CLI with official plugins (see [Plugins](#plugins))
+- AI coding agents (all installed as npm globals under the `claude` user):
+  - **Claude Code** (`@anthropic-ai/claude-code`) — with official plugins, see [Plugins](#plugins)
+  - **OpenAI Codex** (`@openai/codex`)
+  - **SST opencode** (`opencode-ai`)
+  - **Pi Coding Agent** (`@mariozechner/pi-coding-agent`) — minimal terminal coding harness supporting 15+ LLMs
 
 ## Plugins
 
@@ -49,7 +53,7 @@ Set `CLAUDE_CODE_OAUTH_TOKEN` in your `.env` file. Claude CLI picks this up auto
 CLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat01-...
 ```
 
-You can get a token by running `claude set-token` on your host machine.
+You can get a token by running `claude setup-token` on your host machine.
 
 ### 3. Configure GitHub tokens (optional)
 
