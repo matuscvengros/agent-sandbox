@@ -14,6 +14,11 @@ ARG DEBIAN_FRONTEND=noninteractive
 
 # ===========================================================================
 # Root Operations
+#
+# Ordered by volatility: slow-and-stable things (apt, Rust, Node graft) sit
+# near the top so they cache deeply, semi-volatile things (language tools)
+# below them, and user/fs setup last so edits there don't bust the heavy
+# toolchain layers above.
 # ===========================================================================
 
 # -- System Packages --------------------------------------------------------
@@ -32,6 +37,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     vim \
     && rm -rf /var/lib/apt/lists/*
 
+# -- Locale -----------------------------------------------------------------
+RUN sed -i '/en_US.UTF-8/s/^# //' /etc/locale.gen \
+ && locale-gen en_US.UTF-8
+ENV LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
+
+# -- Rust Toolchain ---------------------------------------------------------
+## rustup: Rust toolchain installer (stable channel)
+## Includes: rustc, cargo, rustfmt, clippy, rust-analyzer
+ENV RUSTUP_HOME=/usr/local/rustup \
+    CARGO_HOME=/usr/local/cargo \
+    PATH="/usr/local/cargo/bin:${PATH}"
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+    | sh -s -- -y --default-toolchain stable --profile default \
+    && chmod -R a+w $RUSTUP_HOME $CARGO_HOME \
+    && rustup component add rust-analyzer
+
 # -- Node 24 (from official image) ------------------------------------------
 ## Copied from node:24 multi-stage build. Python is the base image (it
 ## ships pip, shared libs, and the stdlib), so only the Node binary and
@@ -45,9 +66,12 @@ RUN ln -s ../lib/node_modules/npm/bin/npm-cli.js       /usr/local/bin/npm \
 # -- npm: Upgrade to Latest -------------------------------------------------
 RUN npm install -g npm@latest
 
-# -- TypeScript LSP ------------------------------------------------------------
+# -- Global npm Tools -------------------------------------------------------
 ## typescript-language-server: LSP wrapper for tsserver
-RUN npm install -g typescript-language-server
+## firecrawl-cli: Firecrawl web-scraping CLI (companion to the firecrawl plugin)
+RUN npm install -g \
+    typescript-language-server \
+    firecrawl-cli
 
 # -- Python Tools -----------------------------------------------------------
 ## uv: fast Python package manager
@@ -68,22 +92,6 @@ RUN pip install \
     scipy numpy pandas matplotlib \
     requests httpx pydantic
 
-# -- Rust Toolchain ---------------------------------------------------------
-## rustup: Rust toolchain installer (stable channel)
-## Includes: rustc, cargo, rustfmt, clippy
-ENV RUSTUP_HOME=/usr/local/rustup \
-    CARGO_HOME=/usr/local/cargo \
-    PATH="/usr/local/cargo/bin:${PATH}"
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
-    | sh -s -- -y --default-toolchain stable --profile default \
-    && chmod -R a+w $RUSTUP_HOME $CARGO_HOME \
-    && rustup component add rust-analyzer
-
-# -- Locale -----------------------------------------------------------------
-RUN sed -i '/en_US.UTF-8/s/^# //' /etc/locale.gen \
- && locale-gen en_US.UTF-8
-ENV LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
-
 # -- User Setup -------------------------------------------------------------
 ## Create claude user (UID 1000). The python:3.14-bookworm base ships no
 ## non-root user, so UID 1000 is free.
@@ -101,12 +109,13 @@ RUN chown -R claude:claude /home/claude
 
 # ===========================================================================
 # User Operations
+#
+# Everything from here runs as the claude user. Ordered so the volatile,
+# slow Claude-CLI + plugin installs sit near the bottom, and the semi-stable
+# runtime settings COPY sits after them (edits to settings.json must not
+# bust the plugin-install layer above).
 # ===========================================================================
 USER claude
-
-# -- Claude Code Config -----------------------------------------------------
-COPY --chown=claude:claude claude/.claude.json /home/claude/.claude.json
-COPY --chown=claude:claude claude/settings.json /home/claude/.claude/settings.json
 
 # -- Shell: Starship Prompt -------------------------------------------------
 RUN curl -sS https://starship.rs/install.sh | sh -s -- -y \
@@ -117,12 +126,15 @@ RUN curl -sS https://starship.rs/install.sh | sh -s -- -y \
 ENV PATH="/home/claude/.local/bin:${PATH}"
 RUN curl -fsSL https://claude.ai/install.sh | bash
 
+# -- Claude Code: Onboarding State ------------------------------------------
+## Seeds onboarding/marketplace flags so `claude plugin install` below runs
+## non-interactively. Must come before plugin installs, because those mutate
+## this same file.
+COPY --chown=claude:claude claude/.claude.json /home/claude/.claude.json
+
 # -- Claude Code: Plugins ---------------------------------------------------
 ## QOL
 RUN npx claude-statusline-atomic@latest install
-
-## Tools
-RUN sudo npm install -g firecrawl-cli
 
 ## Official Marketplace
 RUN claude plugin marketplace add anthropics/claude-plugins-official
@@ -156,18 +168,25 @@ RUN claude plugin install superpowers@claude-plugins-official \
     && claude plugin install context7@claude-plugins-official \
     && claude plugin install github@claude-plugins-official
 
-# -- Healthcheck ------------------------------------------------------------
-HEALTHCHECK --interval=30s --timeout=5s CMD claude --version || exit 1
+# -- Claude Code: Runtime Settings ------------------------------------------
+## Placed after the plugin-install layer so edits to model/permissions
+## don't invalidate the expensive plugin layer above.
+COPY --chown=claude:claude claude/settings.json /home/claude/.claude/settings.json
 
-# -- Scripts -------------------------------------------------------------
+# ===========================================================================
+# Finalize
+# ===========================================================================
+
+# -- Scripts ----------------------------------------------------------------
 ## Entrypoint
 COPY --chmod=755 scripts/entrypoint.sh /entrypoint.sh
-
 ## Credentials
 COPY --chmod=755 --chown=claude:claude scripts/setup-credentials.sh /tmp/setup-credentials.sh
-
 ## Trust
 COPY --chmod=755 --chown=claude:claude scripts/setup-claude-workdir-trust.sh /tmp/setup-claude-workdir-trust.sh
+
+# -- Healthcheck ------------------------------------------------------------
+HEALTHCHECK --interval=30s --timeout=5s CMD claude --version || exit 1
 
 WORKDIR /home/claude
 ENTRYPOINT ["/entrypoint.sh"]
