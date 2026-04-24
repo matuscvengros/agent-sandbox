@@ -102,9 +102,18 @@ docker compose -f docker-compose.yml -f docker-compose.build.yml build --no-cach
 
 Or via the helper: `cc -bf` / `cc --build-force`.
 
-## Shell function
+## Shell functions
 
-The `cc` function lets you launch the sandbox from any project directory. In persistent mode, it mounts `~/.claude`, `~/.claude.json`, `~/.config/git`, and `~/.config/gh` from your home directory into the container so session history, plugins, settings, and tool configs are shared with your host Claude Code.
+Four launchers — one per AI agent — all share the same sandbox image, compose overlays, and flags:
+
+| Command | Tool | Container command |
+|---------|------|-------------------|
+| `cc`    | Claude Code        | `claude --dangerously-skip-permissions` |
+| `oc`    | SST opencode       | `opencode` |
+| `cx`    | OpenAI Codex       | `codex` |
+| `pi`    | Pi Coding Agent    | `pi` |
+
+Internally all four delegate to a shared `_sandbox_run` function (in `shell/.zshrc` and `shell/.bashrc`). Each wrapper just sets the tool name + default args and calls the runner. In persistent mode (the default), the container mounts shared config (`~/.config/git`, `~/.config/gh`) plus every agent's state dir (`~/.claude`, `~/.claude.json`, `~/.codex`, `~/.config/opencode`, `~/.pi`), so session history, settings, and auth are unified with the host.
 
 ### Setup (macOS or Linux)
 
@@ -127,7 +136,7 @@ From any project directory:
 ```bash
 cd ~/my-project
 
-cc                            # run with pulled GHCR image, persistent state
+cc                            # run Claude Code, pulled GHCR image, persistent state
 cc -- -p "build a REST API"   # prompt mode, persistent state
 cc -- --model sonnet          # override default model
 
@@ -149,19 +158,33 @@ cc --shell                    # same thing
 cc -h                         # show help
 ```
 
-**`cc`** (default) uses the pulled GHCR image and mounts Claude's persistent state (`~/.claude`, `~/.claude.json`, `~/.config/git`, `~/.config/gh`) into the container, preserving conversation history, project memory, and plugin state across runs. Runs with `--dangerously-skip-permissions`.
+`oc`, `cx`, and `pi` accept the exact same flags — every example above applies verbatim with the command name swapped:
 
-**`cc -b` / `cc --build`** builds the image locally from the Dockerfile before running. The local build is tagged `claude-sandbox` and doesn't affect the pulled GHCR image.
+```bash
+oc                            # opencode, pulled image, persistent state
+cx                            # Codex, pulled image, persistent state
+pi                            # Pi Coding Agent, pulled image, persistent state
 
-**`cc -bf` / `cc --build-force`** same as `--build` but passes `--no-cache` to Docker, bypassing the layer cache. Useful when a cached layer is masking a script change (e.g., `scripts/*`).
+oc -is                        # isolated opencode
+cx -b -- --model gpt-5        # build locally, pass --model through to codex
+pi -sh                        # drop into a shell instead of Pi
+```
 
-**`cc --isolated`** gives you a clean, disposable sandbox — Claude starts fresh with no memory of previous sessions.
+### Flags (shared across all four launchers)
 
-**`cc --shell`** drops you into a bash shell inside the sandbox for manual inspection or setup.
+**`<cmd>`** (default) uses the pulled GHCR image and mounts every agent's persistent state into the container, preserving conversation history, sessions, and auth across runs. `cc` adds `--dangerously-skip-permissions`; the other three pass no default flags.
 
-**`cc -v <path>`** / **`cc --volume <path>`** mounts an additional host directory into the container at `/home/claude/<dirname>` (read-write). Repeatable for multiple volumes.
+**`<cmd> -b` / `<cmd> --build`** builds the image locally from the Dockerfile before running. The local build is tagged `claude-sandbox` and doesn't affect the pulled GHCR image.
 
-**`cc -rov <path>`** / **`cc --read-only-volume <path>`** same as `-v` but the mount is read-only. Useful for reference data or configs Claude shouldn't modify.
+**`<cmd> -bf` / `<cmd> --build-force`** same as `--build` but passes `--no-cache` to Docker, bypassing the layer cache. Useful when a cached layer is masking a script change (e.g., `scripts/*`).
+
+**`<cmd> --isolated`** gives you a clean, disposable sandbox — the agent starts fresh with no memory of previous sessions and no access to host state.
+
+**`<cmd> --shell`** drops you into a bash shell inside the sandbox for manual inspection or setup. The agent is never launched.
+
+**`<cmd> -v <path>`** / **`<cmd> --volume <path>`** mounts an additional host directory into the container at `/home/claude/<dirname>` (read-write). Repeatable for multiple volumes.
+
+**`<cmd> -rov <path>`** / **`<cmd> --read-only-volume <path>`** same as `-v` but the mount is read-only. Useful for reference data or configs the agent shouldn't modify.
 
 The current directory is automatically mounted into the container at the same absolute path (e.g., running from `/Users/you/my-project` mounts to `/Users/you/my-project`). This preserves Claude's path-derived session keys across host and container.
 
@@ -243,10 +266,13 @@ That repo can tag its image as `claude-sandbox` locally (matching the name the `
 |---------------|-------------|--------|---------|
 | `${PWD}` (same absolute path) | Caller's `$PWD` | Read/Write | Project workspace (1:1 mirror) |
 | `/ssh-agent` | Host's `$SSH_AUTH_SOCK` | Read-only | SSH agent forwarding |
-| `/home/claude/.claude` | `$HOME/.claude` | Read/Write | Claude state (persistent mode only) |
-| `/home/claude/.claude.json` | `$HOME/.claude.json` | Read/Write | Claude config (persistent mode only) |
 | `/home/claude/.config/git` | `$HOME/.config/git` | Read/Write | Git config (persistent mode only) |
 | `/home/claude/.config/gh` | `$HOME/.config/gh` | Read/Write | GitHub CLI config (persistent mode only) |
+| `/home/claude/.claude` | `$HOME/.claude` | Read/Write | Claude Code state (persistent mode only) |
+| `/home/claude/.claude.json` | `$HOME/.claude.json` | Read/Write | Claude Code config (persistent mode only) |
+| `/home/claude/.codex` | `$HOME/.codex` | Read/Write | Codex config + state (persistent mode only) |
+| `/home/claude/.config/opencode` | `$HOME/.config/opencode` | Read/Write | opencode config (persistent mode only) |
+| `/home/claude/.pi` | `$HOME/.pi` | Read/Write | Pi Coding Agent config + sessions (persistent mode only) |
 
 The current directory is mounted into the container at the **same absolute path** it has on the host (1:1 mirror). This preserves Claude's per-project session keys (`~/.claude/projects/<path-encoded>`) across host and container.
 
