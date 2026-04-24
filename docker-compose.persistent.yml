@@ -1,10 +1,18 @@
 # Overlay that mounts host Claude/config state into the container for persistent mode.
 # Used with: docker compose -f docker-compose.yml -f docker-compose.persistent.yml ...
-# Invoked by `cc` (default persistent mode).
+# Invoked by `cc`, `oc`, `cx`, `pi` (default persistent mode).
 services:
   claude-sandbox:
     volumes:
-      - "$HOME/.claude:/home/claude/.claude"
-      - "$HOME/.claude.json:/home/claude/.claude.json"
+      # General config (shared across all tools)
       - "$HOME/.config/git:/home/claude/.config/git"
       - "$HOME/.config/gh:/home/claude/.config/gh"
+      # Claude Code
+      - "$HOME/.claude:/home/claude/.claude"
+      - "$HOME/.claude.json:/home/claude/.claude.json"
+      # Codex
+      - "$HOME/.codex:/home/claude/.codex"
+      # OpenCode
+      - "$HOME/.config/opencode:/home/claude/.config/opencode"
+      # Pi
+      - "$HOME/.pi:/home/claude/.pi"
