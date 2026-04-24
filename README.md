@@ -3,9 +3,7 @@
 [![Build](https://github.com/matuscvengros/agent-sandbox/actions/workflows/build.yml/badge.svg)](https://github.com/matuscvengros/agent-sandbox/actions/workflows/build.yml)
 [![Release](https://github.com/matuscvengros/agent-sandbox/actions/workflows/release.yml/badge.svg)](https://github.com/matuscvengros/agent-sandbox/actions/workflows/release.yml)
 [![Nightly](https://github.com/matuscvengros/agent-sandbox/actions/workflows/nightly.yml/badge.svg)](https://github.com/matuscvengros/agent-sandbox/actions/workflows/nightly.yml)
-[![Docker](https://img.shields.io/badge/docker-python%3A3.14--bookworm-blue?logo=docker)](https://hub.docker.com/_/python)
 [![Platform](https://img.shields.io/badge/platform-linux%2Famd64%20%7C%20linux%2Farm64-lightgrey?logo=linux)](https://ghcr.io/matuscvengros/agent-sandbox)
-[![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
 
 Docker container for running AI coding agents (Claude Code, OpenAI Codex, OpenCode, Pi) autonomously in an isolated sandbox. Based on `python:3.14-bookworm` with Node.js 24 grafted in. Built for macOS hosts using OrbStack where Docker Sandbox isn't available.
 
