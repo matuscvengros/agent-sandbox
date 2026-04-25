@@ -12,12 +12,13 @@ rm -f /tmp/setup-credentials.sh
 source /tmp/setup-claude-workdir-trust.sh
 rm -f /tmp/setup-claude-workdir-trust.sh
 
-# Link the workspace to the home directory for easier access (e.g., via `cd ~/workspace`),
-# but only if it's not already the home directory and the link doesn't already exist
+# Symlink the workspace into the home directory under its basename for easier access
+# (e.g., PWD=/Users/you/workdir → ~/workdir). Skipped when the workspace already is
+# the home directory, or when a name collision exists at the link path.
 LINK="$HOME/$(basename "$WORKSPACE")"
-  if [ "$WORKSPACE" != "$HOME" ] && [ ! -e "$LINK" ]; then
-    ln -s "$WORKSPACE" "$LINK"
-  fi
+if [ "$WORKSPACE" != "$HOME" ] && [ ! -e "$LINK" ]; then
+  ln -s "$WORKSPACE" "$LINK"
+fi
 
 # Run CMD (defaults to bash — override via docker run/compose)
 exec "$@"
