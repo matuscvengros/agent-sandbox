@@ -93,46 +93,46 @@ RUN pip install \
     requests httpx pydantic
 
 # -- User Setup -------------------------------------------------------------
-## Create claude user (UID 1000). The python:3.14-bookworm base ships no
+## Create agent user (UID 1000). The python:3.14-bookworm base ships no
 ## non-root user, so UID 1000 is free.
-RUN useradd -m -s /bin/bash -u 1000 claude \
-    && mkdir -p /home/claude/.config /home/claude/.ssh /home/claude/.claude \
-    && chmod 700 /home/claude/.ssh \
-    && echo "claude ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/claude \
-    && chmod 0440 /etc/sudoers.d/claude
+RUN useradd -m -s /bin/bash -u 1000 agent \
+    && mkdir -p /home/agent/.config /home/agent/.ssh /home/agent/.claude \
+    && chmod 700 /home/agent/.ssh \
+    && echo "agent ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/agent \
+    && chmod 0440 /etc/sudoers.d/agent
 
 # -- SSH --------------------------------------------------------------------
-COPY --chmod=644 ssh/known_hosts /home/claude/.ssh/known_hosts
+COPY --chmod=644 ssh/known_hosts /home/agent/.ssh/known_hosts
 
 # -- Finalize Root ----------------------------------------------------------
-RUN chown -R claude:claude /home/claude
+RUN chown -R agent:agent /home/agent
 
 # ===========================================================================
 # User Operations
 #
-# Everything from here runs as the claude user. Ordered so the volatile,
+# Everything from here runs as the agent user. Ordered so the volatile,
 # slow Claude-CLI + plugin installs sit near the bottom, and the semi-stable
 # runtime settings COPY sits after them (edits to settings.json must not
 # bust the plugin-install layer above).
 # ===========================================================================
-USER claude
+USER agent
 
 # -- Per-user npm prefix ----------------------------------------------------
-## Install npm globals under /home/claude/.npm-global so each AI-agent CLI
-## below can be installed as `claude` without sudo. Binaries land in
+## Install npm globals under /home/agent/.npm-global so each AI-agent CLI
+## below can be installed as `agent` without sudo. Binaries land in
 ## ~/.npm-global/bin which we prepend to PATH.
 ##
 ## Note: ENV is image-wide, not USER-scoped. These vars persist to runtime
 ## and to any future `USER root` layer below, so a subsequent root-level
-## `npm install -g` would also target /home/claude/.npm-global unless it
+## `npm install -g` would also target /home/agent/.npm-global unless it
 ## overrides NPM_CONFIG_PREFIX inline.
-ENV NPM_CONFIG_PREFIX=/home/claude/.npm-global \
-    PATH="/home/claude/.npm-global/bin:${PATH}"
+ENV NPM_CONFIG_PREFIX=/home/agent/.npm-global \
+    PATH="/home/agent/.npm-global/bin:${PATH}"
 
 # -- Shell: Starship Prompt -------------------------------------------------
 RUN curl -sS https://starship.rs/install.sh | sh -s -- -y \
-    && starship preset bracketed-segments -o /home/claude/.config/starship.toml \
-    && echo 'eval "$(starship init bash)"' >> /home/claude/.bashrc
+    && starship preset bracketed-segments -o /home/agent/.config/starship.toml \
+    && echo 'eval "$(starship init bash)"' >> /home/agent/.bashrc
 
 # -- Claude Code -----------------------------------------------------------
 
@@ -143,7 +143,7 @@ RUN npm install -g @anthropic-ai/claude-code
 ### Seeds onboarding/marketplace flags so `claude plugin install` below runs
 ### non-interactively. Must come before plugin installs, because those mutate
 ### this same file.
-COPY --chown=claude:claude claude/.claude.json /home/claude/.claude.json
+COPY --chown=agent:agent claude/.claude.json /home/agent/.claude.json
 
 ## -- Plugins --
 ### QOL
@@ -184,7 +184,7 @@ RUN claude plugin install superpowers@claude-plugins-official \
 ## -- Runtime Settings --
 ### Placed after the plugin-install layer so edits to model/permissions
 ### don't invalidate the expensive plugin layer above.
-COPY --chown=claude:claude claude/settings.json /home/claude/.claude/settings.json
+COPY --chown=agent:agent claude/settings.json /home/agent/.claude/settings.json
 
 # -- Codex -----------------------------------------------------------------
 ## OpenAI Codex: AI coding agent CLI
@@ -206,13 +206,13 @@ RUN npm install -g @mariozechner/pi-coding-agent
 ## Entrypoint
 COPY --chmod=755 scripts/entrypoint.sh /entrypoint.sh
 ## Credentials
-COPY --chmod=755 --chown=claude:claude scripts/setup-credentials.sh /tmp/setup-credentials.sh
+COPY --chmod=755 --chown=agent:agent scripts/setup-credentials.sh /tmp/setup-credentials.sh
 ## Trust
-COPY --chmod=755 --chown=claude:claude scripts/setup-claude-workdir-trust.sh /tmp/setup-claude-workdir-trust.sh
+COPY --chmod=755 --chown=agent:agent scripts/setup-claude-workdir-trust.sh /tmp/setup-claude-workdir-trust.sh
 
 # -- Healthcheck ------------------------------------------------------------
 HEALTHCHECK --interval=30s --timeout=5s CMD claude --version || exit 1
 
-WORKDIR /home/claude
+WORKDIR /home/agent
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["bash"]

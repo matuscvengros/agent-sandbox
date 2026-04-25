@@ -5,14 +5,14 @@ services:
   agent-sandbox:
     volumes:
       # General config (shared across all tools)
-      - "$HOME/.config/git:/home/claude/.config/git"
-      - "$HOME/.config/gh:/home/claude/.config/gh"
+      - "$HOME/.config/git:/home/agent/.config/git"
+      - "$HOME/.config/gh:/home/agent/.config/gh"
       # Claude Code
-      - "$HOME/.claude:/home/claude/.claude"
-      - "$HOME/.claude.json:/home/claude/.claude.json"
+      - "$HOME/.claude:/home/agent/.claude"
+      - "$HOME/.claude.json:/home/agent/.claude.json"
       # Codex
-      - "$HOME/.codex:/home/claude/.codex"
+      - "$HOME/.codex:/home/agent/.codex"
       # OpenCode
-      - "$HOME/.config/opencode:/home/claude/.config/opencode"
+      - "$HOME/.config/opencode:/home/agent/.config/opencode"
       # Pi
-      - "$HOME/.pi:/home/claude/.pi"
+      - "$HOME/.pi:/home/agent/.pi"

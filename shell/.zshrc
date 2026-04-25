@@ -81,13 +81,13 @@ _sandbox_run() {
                 shift
                 if [[ -z "$1" ]]; then echo "Error: -v/--volume requires a path argument" >&2; return 1; fi
                 vol_path="$(realpath "$1" 2>/dev/null)" || { echo "Error: path not found: $1" >&2; return 1; }
-                extra_vols+=(-v "$vol_path:/home/claude/$(basename "$vol_path")")
+                extra_vols+=(-v "$vol_path:/home/agent/$(basename "$vol_path")")
                 shift ;;
             -rov|--read-only-volume)
                 shift
                 if [[ -z "$1" ]]; then echo "Error: -rov/--read-only-volume requires a path argument" >&2; return 1; fi
                 vol_path="$(realpath "$1" 2>/dev/null)" || { echo "Error: path not found: $1" >&2; return 1; }
-                extra_vols+=(-v "$vol_path:/home/claude/$(basename "$vol_path"):ro")
+                extra_vols+=(-v "$vol_path:/home/agent/$(basename "$vol_path"):ro")
                 shift ;;
             --)
                 shift

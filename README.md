@@ -16,7 +16,7 @@ Docker container for running AI coding agents (Claude Code, OpenAI Codex, OpenCo
 - Git, GitHub CLI (`gh`), curl, wget, ripgrep, fd-find, jq, openssh-client
 - Starship prompt (Bracketed Segments preset)
 - Firecrawl CLI (`firecrawl-cli`)
-- AI coding agents (all installed as npm globals under the `claude` user):
+- AI coding agents (all installed as npm globals under the `agent` user):
   - **Claude Code** (`@anthropic-ai/claude-code`) — with official plugins, see [Plugins](#plugins)
   - **OpenAI Codex** (`@openai/codex`)
   - **SST opencode** (`opencode-ai`)
@@ -170,19 +170,19 @@ pi -sh                        # drop into a shell instead of Pi
 
 ### Flags (shared across all four launchers)
 
-**`<cmd>`** (default) uses the pulled GHCR image and mounts every agent's persistent state into the container, preserving conversation history, sessions, and auth across runs. `cc` adds `--dangerously-skip-permissions`; the other three pass no default flags.
+**`<agent>`** (default) uses the pulled GHCR image and mounts every agent's persistent state into the container, preserving conversation history, sessions, and auth across runs. `cc` adds `--dangerously-skip-permissions`; the other three pass no default flags.
 
-**`<cmd> -b` / `<cmd> --build`** builds the image locally from the Dockerfile before running. The local build is tagged `agent-sandbox` and doesn't affect the pulled GHCR image.
+**`<agent> -b` / `<agent> --build`** builds the image locally from the Dockerfile before running. The local build is tagged `agent-sandbox` and doesn't affect the pulled GHCR image.
 
-**`<cmd> -bf` / `<cmd> --build-force`** same as `--build` but passes `--no-cache` to Docker, bypassing the layer cache. Useful when a cached layer is masking a script change (e.g., `scripts/*`).
+**`<agent> -bf` / `<agent> --build-force`** same as `--build` but passes `--no-cache` to Docker, bypassing the layer cache. Useful when a cached layer is masking a script change (e.g., `scripts/*`).
 
-**`<cmd> --isolated`** gives you a clean, disposable sandbox — the agent starts fresh with no memory of previous sessions and no access to host state.
+**`<agent> --isolated`** gives you a clean, disposable sandbox — the agent starts fresh with no memory of previous sessions and no access to host state.
 
-**`<cmd> --shell`** drops you into a bash shell inside the sandbox for manual inspection or setup. The agent is never launched.
+**`<agent> --shell`** drops you into a bash shell inside the sandbox for manual inspection or setup. The agent is never launched.
 
-**`<cmd> -v <path>`** / **`<cmd> --volume <path>`** mounts an additional host directory into the container at `/home/claude/<dirname>` (read-write). Repeatable for multiple volumes.
+**`<agent> -v <path>`** / **`<agent> --volume <path>`** mounts an additional host directory into the container at `/home/agent/<dirname>` (read-write). Repeatable for multiple volumes.
 
-**`<cmd> -rov <path>`** / **`<cmd> --read-only-volume <path>`** same as `-v` but the mount is read-only. Useful for reference data or configs the agent shouldn't modify.
+**`<agent> -rov <path>`** / **`<agent> --read-only-volume <path>`** same as `-v` but the mount is read-only. Useful for reference data or configs the agent shouldn't modify.
 
 The current directory is automatically mounted into the container at the same absolute path (e.g., running from `/Users/you/my-project` mounts to `/Users/you/my-project`). This preserves Claude's path-derived session keys across host and container.
 
@@ -264,13 +264,13 @@ That repo can tag its image as `agent-sandbox` locally (matching the name the `c
 |---------------|-------------|--------|---------|
 | `${PWD}` (same absolute path) | Caller's `$PWD` | Read/Write | Project workspace (1:1 mirror) |
 | `/ssh-agent` | Host's `$SSH_AUTH_SOCK` | Read-only | SSH agent forwarding |
-| `/home/claude/.config/git` | `$HOME/.config/git` | Read/Write | Git config (persistent mode only) |
-| `/home/claude/.config/gh` | `$HOME/.config/gh` | Read/Write | GitHub CLI config (persistent mode only) |
-| `/home/claude/.claude` | `$HOME/.claude` | Read/Write | Claude Code state (persistent mode only) |
-| `/home/claude/.claude.json` | `$HOME/.claude.json` | Read/Write | Claude Code config (persistent mode only) |
-| `/home/claude/.codex` | `$HOME/.codex` | Read/Write | Codex config + state (persistent mode only) |
-| `/home/claude/.config/opencode` | `$HOME/.config/opencode` | Read/Write | opencode config (persistent mode only) |
-| `/home/claude/.pi` | `$HOME/.pi` | Read/Write | Pi Coding Agent config + sessions (persistent mode only) |
+| `/home/agent/.config/git` | `$HOME/.config/git` | Read/Write | Git config (persistent mode only) |
+| `/home/agent/.config/gh` | `$HOME/.config/gh` | Read/Write | GitHub CLI config (persistent mode only) |
+| `/home/agent/.claude` | `$HOME/.claude` | Read/Write | Claude Code state (persistent mode only) |
+| `/home/agent/.claude.json` | `$HOME/.claude.json` | Read/Write | Claude Code config (persistent mode only) |
+| `/home/agent/.codex` | `$HOME/.codex` | Read/Write | Codex config + state (persistent mode only) |
+| `/home/agent/.config/opencode` | `$HOME/.config/opencode` | Read/Write | opencode config (persistent mode only) |
+| `/home/agent/.pi` | `$HOME/.pi` | Read/Write | Pi Coding Agent config + sessions (persistent mode only) |
 
 The current directory is mounted into the container at the **same absolute path** it has on the host (1:1 mirror). This preserves Claude's per-project session keys (`~/.claude/projects/<path-encoded>`) across host and container.
 

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-export HOME=/home/claude
+export HOME=/home/agent
 export WORKSPACE="$(pwd)"
 
 # Shared setup: SSH key + git identity

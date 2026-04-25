@@ -2,7 +2,7 @@ name: agent-sandbox
 services:
   agent-sandbox:
     image: ghcr.io/matuscvengros/agent-sandbox:latest
-    user: claude
+    user: agent
     env_file: .env
     working_dir: ${PWD}
     environment:
