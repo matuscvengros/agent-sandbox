@@ -30,12 +30,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Prepare platform pair
-        id: prep
-        run: |
-          platform=${{ matrix.platform }}
-          echo "pair=${platform//\//-}" >> "$GITHUB_OUTPUT"
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -59,6 +53,7 @@ jobs:
           context: .
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
+          pull: true
           no-cache: true
           outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
 
@@ -71,7 +66,7 @@ jobs:
       - name: Upload digest
         uses: actions/upload-artifact@v4
         with:
-          name: digests-${{ steps.prep.outputs.pair }}
+          name: digests-${{ matrix.runner }}
           path: /tmp/digests/*
           if-no-files-found: error
           retention-days: 1

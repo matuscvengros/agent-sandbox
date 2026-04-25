@@ -11,7 +11,7 @@ Docker container for running AI coding agents (Claude Code, OpenAI Codex, OpenCo
 
 - Node.js 24 (LTS) + npm
 - Python 3.14 + pip + uv, pytest, ruff, pyright, pint, engunits, scipy, numpy, pandas, matplotlib, requests, httpx, pydantic
-- Rust (stable) via rustup — rustc, cargo, rustfmt, clippy
+- Rust stable via rustup — rustc, cargo, rustfmt, clippy
 - C/C++ (gcc, g++, make, cmake, build-essential)
 - Git, GitHub CLI (`gh`), curl, wget, ripgrep, fd-find, jq, openssh-client
 - Starship prompt (Bracketed Segments preset)
@@ -80,7 +80,7 @@ The sandbox defaults to pulling the nightly-published image from GHCR — no bui
 docker compose pull
 ```
 
-That's it. `cc` will `docker compose run` against the pulled image on every invocation.
+That's it. `sbxcc` will `docker compose run` against the pulled image on every invocation.
 
 **Alternative: local build**
 
@@ -90,7 +90,7 @@ To build the image from the Dockerfile instead, use the build overlay:
 docker compose -f docker-compose.yml -f docker-compose.build.yml build
 ```
 
-Or let the `cc` helper do it via `cc -b` / `cc --build`. A local build tags the image as `agent-sandbox` and leaves the pulled GHCR image untouched.
+Or let the `sbxcc` helper do it via `sbxcc -b` / `sbxcc --build`. A local build tags the image as `agent-sandbox` and leaves the pulled GHCR image untouched.
 
 To rebuild from scratch (no cache):
 
@@ -98,7 +98,7 @@ To rebuild from scratch (no cache):
 docker compose -f docker-compose.yml -f docker-compose.build.yml build --no-cache
 ```
 
-Or via the helper: `cc -bf` / `cc --build-force`.
+Or via the helper: `sbxcc -bf` / `sbxcc --build-force`.
 
 ## Shell functions
 
@@ -106,14 +106,14 @@ Four launchers — one per AI agent — all share the same sandbox image, compos
 
 | Command | Tool | Container command |
 |---------|------|-------------------|
-| `cc`    | Claude Code        | `claude --dangerously-skip-permissions` |
-| `oc`    | SST opencode       | `opencode` |
-| `cx`    | OpenAI Codex       | `codex` |
-| `pi`    | Pi Coding Agent    | `pi` |
+| `sbxcc` | Claude Code        | `claude --dangerously-skip-permissions` |
+| `sbxoc` | SST opencode       | `opencode --yolo` |
+| `sbxcx` | OpenAI Codex       | `codex --yolo` |
+| `sbxpi` | Pi Coding Agent    | `pi` |
 
-Internally all four delegate to a shared `_sandbox_run` function (in `shell/.zshrc` and `shell/.bashrc`). Each wrapper just sets the tool name + default args and calls the runner. In persistent mode (the default), the container mounts shared config (`~/.config/git`, `~/.config/gh`) plus every agent's state dir (`~/.claude`, `~/.claude.json`, `~/.codex`, `~/.config/opencode`, `~/.pi`), so session history, settings, and auth are unified with the host.
+Internally all four delegate to a shared `_sandbox_run` function (in `shell/.zshrc` and `shell/.bashrc`). Each wrapper just sets the tool name + default args and calls the runner. In persistent mode (the default), the launcher pre-creates expected state files/directories, then mounts shared config (`~/.config/git`, `~/.config/gh`) plus every agent's state dir (`~/.claude`, `~/.claude.json`, `~/.codex`, `~/.config/opencode`, `~/.pi`), so session history, settings, and auth are unified with the host.
 
-### Setup (macOS or Linux)
+### Setup (macOS with OrbStack)
 
 ```bash
 # zsh (macOS default)
@@ -121,7 +121,7 @@ echo 'export DOCKER_SANDBOX_DIR="$HOME/path/to/agent-sandbox"' >> ~/.zshrc
 cat shell/.zshrc >> ~/.zshrc
 source ~/.zshrc
 
-# bash (Linux default)
+# bash (if you use bash)
 echo 'export DOCKER_SANDBOX_DIR="$HOME/path/to/agent-sandbox"' >> ~/.bashrc
 cat shell/.bashrc >> ~/.bashrc
 source ~/.bashrc
@@ -134,43 +134,43 @@ From any project directory:
 ```bash
 cd ~/my-project
 
-cc                            # run Claude Code, pulled GHCR image, persistent state
-cc -- -p "build a REST API"   # prompt mode, persistent state
-cc -- --model sonnet          # override default model
+sbxcc                         # run Claude Code, pulled GHCR image, persistent state
+sbxcc -- -p "build a REST API" # prompt mode, persistent state
+sbxcc -- --model sonnet       # override default model
 
-cc -b                         # build image locally, then run
-cc -bf                        # build locally with --no-cache, then run
-cc --build -is                # build locally, isolated run
+sbxcc -b                      # build image locally, then run
+sbxcc -bf                     # build locally with --no-cache, then run
+sbxcc --build -is             # build locally, isolated run
 
-cc -is                        # interactive, isolated (no host state)
-cc --isolated -- -p "task"    # prompt mode, isolated
+sbxcc -is                     # interactive, isolated (no host state)
+sbxcc --isolated -- -p "task" # prompt mode, isolated
 
-cc -v ~/data                  # mount ~/data into container as ~/data (read-write)
-cc -rov ~/config              # mount ~/config as read-only
-cc -v ~/a -rov ~/b            # multiple extra volumes
-cc -v ~/dir1/dir2/dir3        # mounts as ~/dir3 (basename only)
+sbxcc -v ~/data               # mount ~/data into container as ~/data (read-write)
+sbxcc -rov ~/config           # mount ~/config as read-only
+sbxcc -v ~/a -rov ~/b         # multiple extra volumes
+sbxcc -v ~/dir1/dir2/dir3     # mounts as ~/dir3 (basename only)
 
-cc -sh                        # drop into a bash shell
-cc --shell                    # same thing
+sbxcc -sh                     # drop into a bash shell
+sbxcc --shell                 # same thing
 
-cc -h                         # show help
+sbxcc -h                      # show help
 ```
 
-`oc`, `cx`, and `pi` accept the exact same flags — every example above applies verbatim with the command name swapped:
+`sbxoc`, `sbxcx`, and `sbxpi` accept the exact same flags — every example above applies verbatim with the command name swapped:
 
 ```bash
-oc                            # opencode, pulled image, persistent state
-cx                            # Codex, pulled image, persistent state
-pi                            # Pi Coding Agent, pulled image, persistent state
+sbxoc                         # opencode, pulled image, persistent state
+sbxcx                         # Codex, pulled image, persistent state
+sbxpi                         # Pi Coding Agent, pulled image, persistent state
 
-oc -is                        # isolated opencode
-cx -b -- --model gpt-5        # build locally, pass --model through to codex
-pi -sh                        # drop into a shell instead of Pi
+sbxoc -is                     # isolated opencode
+sbxcx -b -- --model gpt-5     # build locally, pass --model through to codex
+sbxpi -sh                     # drop into a shell instead of Pi
 ```
 
 ### Flags (shared across all four launchers)
 
-**`<agent>`** (default) uses the pulled GHCR image and mounts every agent's persistent state into the container, preserving conversation history, sessions, and auth across runs. `cc` adds `--dangerously-skip-permissions`; the other three pass no default flags.
+**`<agent>`** (default) uses the pulled GHCR image and mounts every agent's persistent state into the container, preserving conversation history, sessions, and auth across runs. `sbxcc` adds `--dangerously-skip-permissions`, while `sbxoc` and `sbxcx` add `--yolo`.
 
 **`<agent> -b` / `<agent> --build`** builds the image locally from the Dockerfile before running. The local build is tagged `agent-sandbox` and doesn't affect the pulled GHCR image.
 
@@ -213,14 +213,14 @@ SSH keys are only needed if you want Claude to perform git operations over SSH (
 
 **1. SSH agent forwarding (recommended)**
 
-If your host has an SSH agent running (`ssh-add -l` shows keys), it is automatically forwarded into the container. No configuration needed — the compose file mounts the host's `SSH_AUTH_SOCK` into the container.
+If your host has an SSH agent running (`ssh-add -l` shows keys), the compose service forwards it into the container automatically using OrbStack's documented `/run/host-services/ssh-auth.sock` socket. This works for direct `docker compose run` usage and for the shell launchers.
 
 ```bash
 # Verify your agent has keys loaded
 ssh-add -l
 ```
 
-The container uses `socat` to proxy the SSH agent socket, with automatic retry logic on startup.
+The container uses `socat` to proxy the mounted SSH agent socket, with automatic retry logic on startup. No private key is copied into the image or container when agent forwarding is available.
 
 **2. Base64-encoded key (fallback)**
 
@@ -256,14 +256,18 @@ RUN --mount=type=ssh \
     && claude plugin install your-plugin@your-plugins
 ```
 
-That repo can tag its image as `agent-sandbox` locally (matching the name the `cc` helper expects) or give it any other tag and point `image:` in `docker-compose.yml` at it.
+That repo can tag its image as `agent-sandbox` locally (matching the name the `sbxcc` helper expects) or give it any other tag and point `image:` in `docker-compose.yml` at it.
+
+## Fresh builds
+
+The Dockerfile intentionally uses floating current releases within the Python 3.14 and Node 24 base-image lines. Rust, Starship, Python packages, npm tools, and all AI-agent CLIs are installed fresh during uncached CI builds rather than pinned to exact versions.
 
 ## Mount layout
 
 | Container path | Host source | Access | Purpose |
 |---------------|-------------|--------|---------|
 | `${PWD}` (same absolute path) | Caller's `$PWD` | Read/Write | Project workspace (1:1 mirror) |
-| `/ssh-agent` | Host's `$SSH_AUTH_SOCK` | Read-only | SSH agent forwarding |
+| `/ssh-agent` | OrbStack `/run/host-services/ssh-auth.sock` | Read-only | SSH agent forwarding |
 | `/home/agent/.config/git` | `$HOME/.config/git` | Read/Write | Git config (persistent mode only) |
 | `/home/agent/.config/gh` | `$HOME/.config/gh` | Read/Write | GitHub CLI config (persistent mode only) |
 | `/home/agent/.claude` | `$HOME/.claude` | Read/Write | Claude Code state (persistent mode only) |
@@ -289,11 +293,11 @@ The current directory is mounted into the container at the **same absolute path*
 
 ### Build workflow
 
-Runs on every push and pull request to `main`. Builds the image with Docker Buildx and GitHub Actions cache.
+Runs on every push and pull request to `main`. Builds the image with Docker Buildx using fresh base-image pulls and no Docker layer cache.
 
 ### Nightly workflow
 
-Runs nightly (14:00 UTC) and on manual trigger. Builds the image for `linux/amd64` and `linux/arm64`, and pushes to GHCR with the `latest` tag. This keeps the public image up to date with the latest Claude Code CLI version.
+Runs nightly (14:00 UTC) and on manual trigger. Builds the image for `linux/amd64` and `linux/arm64` with fresh base pulls and no Docker layer cache, then pushes to GHCR with the `latest` tag.
 
 ```bash
 docker pull ghcr.io/matuscvengros/agent-sandbox:latest

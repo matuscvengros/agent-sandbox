@@ -20,4 +20,5 @@ jobs:
         with:
           context: .
           push: false
+          pull: true
           no-cache: true

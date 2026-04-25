@@ -14,7 +14,6 @@ WORKSPACE="$(pwd)"
 # Write to a temp file, then copy contents back (mv fails on bind-mounted files)
 jq --arg ws "$WORKSPACE" '
   .projects[$ws] = (.projects[$ws] // {}) + {
-    allowedTools: [],
     isTrusted: true,
     hasTrustDialogAccepted: true
   }

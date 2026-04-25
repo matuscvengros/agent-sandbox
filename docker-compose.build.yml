@@ -1,6 +1,6 @@
 # Overlay that swaps the pulled GHCR image for a locally built one.
 # Used with: docker compose -f docker-compose.yml -f docker-compose.build.yml ...
-# Invoked by `cc -b` / `cc --build`.
+# Invoked by `sbxcc -b` / `sbxcc --build`.
 services:
   agent-sandbox:
     image: agent-sandbox

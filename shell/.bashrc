@@ -1,10 +1,10 @@
 # Agent Sandbox Launchers
 #
 # Launch one of four AI-agent CLIs inside the agent-sandbox container:
-#   cc   Claude Code        (claude --dangerously-skip-permissions)
-#   oc   OpenCode           (opencode)
-#   cx   OpenAI Codex       (codex)
-#   pi   Pi Coding Agent    (pi)
+#   sbxcc   Claude Code        (claude --dangerously-skip-permissions)
+#   sbxoc   OpenCode           (opencode --yolo)
+#   sbxcx   OpenAI Codex       (codex --yolo)
+#   sbxpi   Pi Coding Agent    (pi)
 #
 # All four wrappers delegate to `_sandbox_run`. See `<agent> -h` for usage.
 
@@ -14,7 +14,7 @@
 _sandbox_help() {
     cat <<'EOF'
 Launches an AI-agent CLI inside the agent-sandbox Docker container.
-Available agents: cc (Claude Code), oc (OpenCode), cx (Codex), pi (Pi
+Available agents: sbxcc (Claude Code), sbxoc (OpenCode), sbxcx (Codex), sbxpi (Pi
 Coding Agent). All accept the same flags.
 
 Usage: <agent> [options] [-- extra args passed to the agent]
@@ -36,10 +36,34 @@ Image source:
 Modes:
   (default)   Persistent — mounts shared config (~/.config/git, ~/.config/gh)
               and every AI-agent state dir (~/.claude, ~/.claude.json,
-              ~/.codex, ~/.config/opencode, ~/.pi)
+              ~/.codex, ~/.config/opencode, ~/.pi), creating missing state
+              paths first
   isolated    Ephemeral container, no state persisted to host
   shell       Shell access to the container (no agent launched)
 EOF
+}
+
+# ---------------------------------------------------------------------------
+# Persistent state setup — Docker bind-mounts missing file sources as
+# directories, so create expected file mounts before Compose runs.
+# ---------------------------------------------------------------------------
+_sandbox_prepare_persistent_state() {
+    mkdir -p \
+        "$HOME/.config/git" \
+        "$HOME/.config/gh" \
+        "$HOME/.claude" \
+        "$HOME/.codex" \
+        "$HOME/.config/opencode" \
+        "$HOME/.pi" || return 1
+
+    if [[ -d "$HOME/.claude.json" ]]; then
+        echo "Error: $HOME/.claude.json is a directory; expected a JSON file" >&2
+        return 1
+    fi
+
+    if [[ ! -e "$HOME/.claude.json" ]]; then
+        printf '{}\n' > "$HOME/.claude.json" || return 1
+    fi
 }
 
 # ---------------------------------------------------------------------------
@@ -56,6 +80,7 @@ _sandbox_run() {
     local mode="persistent"
     local -a extra_vols=()
     local vol_path
+    local run_status=0
     while [[ $# -gt 0 ]]; do
         case "$1" in
             -h|--help)
@@ -110,49 +135,54 @@ _sandbox_run() {
             "${compose[@]}" run --rm \
                 "${extra_vols[@]}" \
                 agent-sandbox "${agent_command[@]}" "$@"
+            run_status=$?
             ;;
         shell)
             "${compose[@]}" run --rm \
                 "${extra_vols[@]}" \
                 agent-sandbox "$@"
+            run_status=$?
             ;;
         persistent)
+            _sandbox_prepare_persistent_state || return 1
             compose+=(-f "$DOCKER_SANDBOX_DIR/docker-compose.persistent.yml")
             "${compose[@]}" run --rm \
                 "${extra_vols[@]}" \
                 agent-sandbox \
                 "${agent_command[@]}" "$@"
+            run_status=$?
             ;;
     esac
 
     # Clean up dangling agent-sandbox images
-    docker image prune -f --filter "label=org.opencontainers.image.title=agent-sandbox" &>/dev/null
+    docker image prune -f --filter "label=org.opencontainers.image.title=agent-sandbox" &>/dev/null || true
+    return "$run_status"
 }
 
 # ---------------------------------------------------------------------------
 # Wrappers — one per AI-agent CLI.
 # ---------------------------------------------------------------------------
 
-# cc — Claude Code
-cc() {
+# sbxcc — Claude Code
+sbxcc() {
     local -a agent_command=(claude --dangerously-skip-permissions)
     _sandbox_run "$@"
 }
 
-# oc — OpenCode
-oc() {
-    local -a agent_command=(opencode)
+# sbxoc — OpenCode
+sbxoc() {
+    local -a agent_command=(opencode --yolo)
     _sandbox_run "$@"
 }
 
-# cx — OpenAI Codex
-cx() {
-    local -a agent_command=(codex)
+# sbxcx — OpenAI Codex
+sbxcx() {
+    local -a agent_command=(codex --yolo)
     _sandbox_run "$@"
 }
 
-# pi — Pi Coding Agent
-pi() {
+# sbxpi — Pi Coding Agent
+sbxpi() {
     local -a agent_command=(pi)
     _sandbox_run "$@"
 }

@@ -10,7 +10,7 @@ services:
     volumes:
       # R/W project workspace — 1:1 mirror of the caller's current directory
       - ${PWD}:${PWD}
-      # SSH agent forwarding via OrbStack/Docker Desktop's magic host-services socket
+      # SSH agent forwarding via OrbStack's documented host-services socket
       - /run/host-services/ssh-auth.sock:/ssh-agent
     stdin_open: true
     tty: true

@@ -1,7 +1,7 @@
 # ===========================================================================
 # Node 24 (copied into the final image via multi-stage)
 # ===========================================================================
-FROM node:24 AS node-src
+FROM node:24-bookworm AS node-src
 
 # ===========================================================================
 # Main Image
@@ -15,10 +15,8 @@ ARG DEBIAN_FRONTEND=noninteractive
 # ===========================================================================
 # Root Operations
 #
-# Ordered by volatility: slow-and-stable things (apt, Rust, Node graft) sit
-# near the top so they cache deeply, semi-volatile things (language tools)
-# below them, and user/fs setup last so edits there don't bust the heavy
-# toolchain layers above.
+# Ordered by setup dependency: base system tools first, then language
+# runtimes/tooling, then user-scoped agent CLIs and plugins.
 # ===========================================================================
 
 # -- System Packages --------------------------------------------------------
@@ -42,36 +40,18 @@ RUN sed -i '/en_US.UTF-8/s/^# //' /etc/locale.gen \
  && locale-gen en_US.UTF-8
 ENV LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
 
-# -- Rust Toolchain ---------------------------------------------------------
-## rustup: Rust toolchain installer (stable channel)
-## Includes: rustc, cargo, rustfmt, clippy, rust-analyzer
-ENV RUSTUP_HOME=/usr/local/rustup \
-    CARGO_HOME=/usr/local/cargo \
-    PATH="/usr/local/cargo/bin:${PATH}"
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
-    | sh -s -- -y --default-toolchain stable --profile default \
-    && chmod -R a+w $RUSTUP_HOME $CARGO_HOME \
-    && rustup component add rust-analyzer
-
 # -- Node 24 (from official image) ------------------------------------------
-## Copied from node:24 multi-stage build. Python is the base image (it
-## ships pip, shared libs, and the stdlib), so only the Node binary and
-## its bundled node_modules (npm, npx, corepack) need grafting in.
+## Copied from the current Node 24 multi-stage build. Python is the base image
+## (it ships pip, shared libs, and the stdlib), so only the Node binary and its
+## bundled node_modules (npm, npx, corepack) need grafting in.
 COPY --from=node-src /usr/local/bin/node /usr/local/bin/node
 COPY --from=node-src /usr/local/lib/node_modules /usr/local/lib/node_modules
 RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js       /usr/local/bin/npm \
  && ln -s /usr/local/lib/node_modules/npm/bin/npx-cli.js       /usr/local/bin/npx \
  && ln -s /usr/local/lib/node_modules/corepack/dist/corepack.js /usr/local/bin/corepack
 
-# -- npm: Upgrade to Latest -------------------------------------------------
-RUN npm install -g npm@latest
-
-# -- Global npm Tools -------------------------------------------------------
-## typescript-language-server: LSP wrapper for tsserver
-## firecrawl-cli: Firecrawl web-scraping CLI (companion to the firecrawl plugin)
-RUN npm install -g \
-    typescript-language-server \
-    firecrawl-cli
+# -- npm: Fresh Upgrade -----------------------------------------------------
+RUN npm install -g npm
 
 # -- Python Tools -----------------------------------------------------------
 ## uv: fast Python package manager
@@ -87,13 +67,32 @@ RUN npm install -g \
 ## requests: HTTP client
 ## httpx: modern async HTTP client
 ## pydantic: data validation using type hints
-RUN pip install \
-    uv pytest ruff pyright pint engunits \
+RUN pip install --no-cache-dir \
+    uv pytest ruff pyright \
+    pint engunits \
     scipy numpy pandas matplotlib \
     requests httpx pydantic
 
+# -- Global npm Tools -------------------------------------------------------
+## typescript-language-server: LSP wrapper for tsserver
+## firecrawl-cli: Firecrawl web-scraping CLI (companion to the firecrawl plugin)
+RUN npm install -g \
+    typescript-language-server \
+    firecrawl-cli
+
+# -- Rust Toolchain ---------------------------------------------------------
+## rustup: Rust toolchain installer (latest stable channel)
+## Includes: rustc, cargo, rustfmt, clippy, rust-analyzer
+ENV RUSTUP_HOME=/usr/local/rustup \
+    CARGO_HOME=/usr/local/cargo \
+    PATH="/usr/local/cargo/bin:${PATH}"
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+    | sh -s -- -y --profile default \
+    && chmod -R a+w $RUSTUP_HOME $CARGO_HOME \
+    && rustup component add rust-analyzer
+
 # -- User Setup -------------------------------------------------------------
-## Create agent user (UID 1000). The python:3.14-bookworm base ships no
+## Create agent user (UID 1000). The Python base image ships no
 ## non-root user, so UID 1000 is free.
 RUN useradd -m -s /bin/bash -u 1000 agent \
     && mkdir -p /home/agent/.config /home/agent/.ssh /home/agent/.claude \
@@ -110,10 +109,7 @@ RUN chown -R agent:agent /home/agent
 # ===========================================================================
 # User Operations
 #
-# Everything from here runs as the agent user. Ordered so the volatile,
-# slow Claude-CLI + plugin installs sit near the bottom, and the semi-stable
-# runtime settings COPY sits after them (edits to settings.json must not
-# bust the plugin-install layer above).
+# Everything from here runs as the agent user.
 # ===========================================================================
 USER agent
 
@@ -147,7 +143,7 @@ COPY --chown=agent:agent claude/.claude.json /home/agent/.claude.json
 
 ## -- Plugins --
 ### QOL
-RUN npx claude-statusline-atomic@latest install
+RUN npx --yes claude-statusline-atomic install
 
 ### Official Marketplace
 RUN claude plugin marketplace add anthropics/claude-plugins-official
@@ -182,8 +178,6 @@ RUN claude plugin install superpowers@claude-plugins-official \
     && claude plugin install github@claude-plugins-official
 
 ## -- Runtime Settings --
-### Placed after the plugin-install layer so edits to model/permissions
-### don't invalidate the expensive plugin layer above.
 COPY --chown=agent:agent claude/settings.json /home/agent/.claude/settings.json
 
 # -- Codex -----------------------------------------------------------------

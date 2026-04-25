@@ -5,7 +5,7 @@
     ]
   },
   "skipDangerousModePermissionPrompt": true,
-  "model": "opus[1m]",
+  "model": "opus",
   "effortLevel": "xhigh",
   "voiceEnabled": false
 }
