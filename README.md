@@ -11,7 +11,7 @@ Docker container for running AI coding agents (Claude Code, OpenAI Codex, OpenCo
 
 - Node.js 24 (LTS) + npm
 - Python 3.14 + pip + uv, pytest, ruff, pyright, pint, engunits, scipy, numpy, pandas, matplotlib, requests, httpx, pydantic
-- Rust stable via rustup — rustc, cargo, rustfmt, clippy
+- Rust stable via rustup — rustc, cargo, rustfmt, clippy; proxies are also linked into `/usr/local/bin` for tool runners that use a reduced PATH
 - C/C++ (gcc, g++, make, cmake, build-essential)
 - Git, GitHub CLI (`gh`), curl, wget, ripgrep, fd-find, jq, openssh-client
 - Starship prompt (Bracketed Segments preset)

@@ -89,7 +89,10 @@ ENV RUSTUP_HOME=/usr/local/rustup \
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
     | sh -s -- -y --profile default \
     && chmod -R a+w $RUSTUP_HOME $CARGO_HOME \
-    && rustup component add rust-analyzer
+    && rustup component add rust-analyzer \
+    && for tool in cargo cargo-clippy cargo-fmt clippy-driver rust-analyzer rustc rustdoc rustfmt rust-gdb rust-gdbgui rust-lldb rustup; do \
+        ln -sf "$CARGO_HOME/bin/$tool" "/usr/local/bin/$tool"; \
+    done
 
 # -- User Setup -------------------------------------------------------------
 ## Create agent user (UID 1000). The Python base image ships no
